@@ -3,6 +3,7 @@
 import { useDrop } from "react-dnd"
 import { EditableBlock, EditableBlockData } from "./EditableBlock"
 import { Card } from "@/components/ui/card"
+import { useRef, useEffect } from "react"
 
 interface EditorCanvasProps {
   blocks: EditableBlockData[]
@@ -27,9 +28,17 @@ export function EditorCanvas({
     }),
   }))
 
+  const canvasRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      dropRef(canvasRef.current)
+    }
+  }, [dropRef])
+
   return (
     <div
-      ref={dropRef}
+      ref={canvasRef}
       className={`border-2 border-dashed p-4 min-h-[400px] ${
         isOver ? "bg-blue-50" : ""
       }`}

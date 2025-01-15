@@ -3,6 +3,7 @@
 import { useDrag } from "react-dnd"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { EditableBlockData } from "./EditableBlock"
+import { useRef, useEffect } from "react"
 
 interface DraggableBlockProps {
   block: EditableBlockData
@@ -11,15 +12,23 @@ interface DraggableBlockProps {
 export function DraggableBlock({ block }: DraggableBlockProps) {
   const [{ isDragging }, dragRef] = useDrag(() => ({
     type: "RESUME_BLOCK",
-    item: block,  // We'll clone it on drop
+    item: block, // We'll clone it on drop
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
   }))
 
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (cardRef.current) {
+      dragRef(cardRef.current)
+    }
+  }, [dragRef])
+
   return (
     <Card
-      ref={dragRef}
+      ref={cardRef}
       className={`mb-2 cursor-move transition-opacity border ${
         isDragging ? "opacity-50" : "opacity-100"
       }`}

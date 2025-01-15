@@ -3,18 +3,18 @@
 import { useState } from "react"
 import { DraggableBlock } from "@/components/editor/DraggableBlock"
 import { EditorCanvas } from "@/components/editor/EditorCanvas"
-import { LatexPreview } from "@/components/preview/LatexPreview"
+import { MarkdownPreview } from "@/components/preview/MarkdownPreview"
 import { Button } from "@/components/ui/button"
-import { defaultLatexPreamble, wrapJakeTemplate } from "@/lib/latexTemplate"
+import { wrapJakeTemplate } from "@/lib/latexTemplate"
 import { EditableBlockData } from "@/components/editor/EditableBlock"
 
 // Our "library" blocks are all *generic*—no prefilled details.
 const libraryBlocks: EditableBlockData[] = [
-  { id: "header", sectionName: "Header", title: "", location: "", duration: "", description: "" },
-  { id: "education", sectionName: "Education", title: "", location: "", duration: "", description: "" },
-  { id: "experience", sectionName: "Experience", title: "", location: "", duration: "", description: "" },
-  { id: "projects", sectionName: "Projects", title: "", location: "", duration: "", description: "" },
-  { id: "skills", sectionName: "Technical Skills", title: "", location: "", duration: "", description: "" },
+  { id: "header", sectionName: "Header", title: "", location: "", duration: ""},
+  { id: "education", sectionName: "Education", title: "", location: "", duration: ""},
+  { id: "experience", sectionName: "Experience", title: "", location: "", duration: ""},
+  { id: "projects", sectionName: "Projects", title: "", location: "", duration: ""},
+  { id: "skills", sectionName: "Technical Skills", title: "", location: "", duration: ""},
 ]
 
 export default function Home() {
@@ -82,7 +82,7 @@ export default function Home() {
       {/* RIGHT COLUMN: LaTeX preview + copy button */}
       <div className="w-full md:w-1/4">
         <h2 className="text-xl font-bold mb-2">Preview</h2>
-        <LatexPreview content={generateLatexDocument()} />
+        <MarkdownPreview content={generateLatexDocument()} />
         <Button className="mt-4" onClick={handleCopyLatex}>
           Copy LaTeX
         </Button>

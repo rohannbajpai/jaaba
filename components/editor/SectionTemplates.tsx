@@ -20,7 +20,7 @@ const sectionTemplates: EditableBlockData[] = [
     location: '',
     duration: '',
     degree: '',
-    gpa: '',
+    //gpa: '', #TODO: readd
     relevantCourses: '',
     activities: ''
   },
@@ -37,7 +37,7 @@ const sectionTemplates: EditableBlockData[] = [
     title: '',
     location: '',
     duration: '',
-    bulletPoints: []
+    projectBullets: []
   },
   {
     id: 'template-projects',
@@ -45,7 +45,7 @@ const sectionTemplates: EditableBlockData[] = [
     title: '',
     location: '',
     duration: '',
-    bulletPoints: []
+    projectBullets: []
   }
 ];
 
