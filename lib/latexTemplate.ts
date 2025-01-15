@@ -117,89 +117,91 @@ export interface Block {
    *
    * 4) Produces a final LaTeX string that Overleaf can compile with no extra macros needed.
    */
+
   export function wrapJakeTemplate(blocks: Block[]): string {
-    let doc = defaultLatexPreamble + '\n\n'
-  
-    // -- 1) If there's a "Header" block, we'll build a centered heading.
-    //    If the user has multiple headers, we can combine them or just take the first.
-    const headerBlock = blocks.find((b) => b.sectionName.toLowerCase() === 'header')
-    if (headerBlock) {
-      // We'll interpret:
-      //   title => user's name
-      //   location => phone/email (or additional contact)
-      //   duration => LinkedIn/GitHub
-      //   description => any lines we want to display below
-      const name = headerBlock.title ? escapeLatex(headerBlock.title) : 'Your Name'
-      const contactLine = headerBlock.location ? escapeLatex(headerBlock.location) : 'Phone/Email'
-      const linkLine = headerBlock.duration ? escapeLatex(headerBlock.duration) : 'LinkedIn/GitHub'
-  
-      // If there's a multiline description, we can bullet it or just show it inline
-      let extraLines = ''
-      if (headerBlock.description) {
-        const lines = headerBlock.description.split('\n').map((l) => l.trim()).filter(Boolean)
-        // Just join them with " | " or newlines
-        extraLines = lines.join(' \\ ')
+    let doc = `
+      \\documentclass[10pt]{article}
+      \\usepackage[utf8]{inputenc}
+      \\usepackage{hyperref}
+      \\usepackage{xcolor}
+      \\hypersetup{
+        colorlinks=true,
+        linkcolor=blue,
+        urlcolor=blue,
+        filecolor=blue,
+        citecolor=blue
       }
+      \\usepackage{geometry}
+      \\geometry{margin=0.5in}
+      \\begin{document}
+    `;
+  
+    // -- 1) Process the "Header" block
+    const headerBlock = blocks.find((b) => b.sectionName.toLowerCase() === 'header');
+    if (headerBlock) {
+      const name = headerBlock.title ? escapeLatex(headerBlock.title) : 'Your Name';
+      const phone = headerBlock.phone ? escapeLatex(headerBlock.phone) : 'Your Phone';
+      const email = headerBlock.email
+        ? `\\href{mailto:${escapeLatex(headerBlock.email)}}{${escapeLatex(headerBlock.email)}}`
+        : 'Your Email';
+      const github = headerBlock.github
+        ? `\\href{${escapeLatex(headerBlock.github)}}{${escapeLatex(headerBlock.github)}}`
+        : '';
+      const linkedin = headerBlock.linkedin
+        ? `\\href{${escapeLatex(headerBlock.linkedin)}}{${escapeLatex(headerBlock.linkedin)}}`
+        : '';
+  
+      // Combine all contact details into a single line
+      const contactLine = [phone, email, github, linkedin].filter(Boolean).join(' \\textbar{} ');
   
       doc += String.raw`
   \begin{center}
-      {\Huge \scshape ${name}}\\[2pt]
-      ${contactLine} \ $|$ \ ${linkLine} \\
-      ${extraLines}
+      {\Huge \scshape ${name}}\\[4pt]
+      ${contactLine}
   \end{center}
-  \vspace{-6pt}
-  `
+  \vspace{-12pt}
+  `;
     }
   
-    // -- 2) Group the rest of the blocks by their sectionName
-    // ignoring "Header" or "header" since we already processed it
-    const nonHeaderBlocks = blocks.filter((b) => b.sectionName.toLowerCase() !== 'header')
+    // -- 2) Process non-header blocks
+    const nonHeaderBlocks = blocks.filter((b) => b.sectionName.toLowerCase() !== 'header');
   
-    // We'll keep them in the order they appear, but group by sectionName
-    const sectionMap = new Map<string, Block[]>()
+    const sectionMap = new Map<string, Block[]>();
     for (const block of nonHeaderBlocks) {
-      const section = block.sectionName || 'Misc'
+      const section = block.sectionName || 'Misc';
       if (!sectionMap.has(section)) {
-        sectionMap.set(section, [])
+        sectionMap.set(section, []);
       }
-      sectionMap.get(section)!.push(block)
+      sectionMap.get(section)!.push(block);
     }
   
-    // -- 3) For each section group, make a \section, then list each block
+    // -- 3) Render each section
     for (const [sectionName, sectionBlocks] of sectionMap.entries()) {
-      doc += `\\section{${escapeLatex(sectionName)}}\n\n`
+      doc += `\\section{${escapeLatex(sectionName)}}\n\n`;
   
-      // For each block, we produce:
-      // \textbf{Title} \hfill \textit{Duration}\\
-      // \textit{Location}\\
-      // - bullet1
-      // - bullet2
-      // (with a bit of spacing)
       for (const block of sectionBlocks) {
-        const title = block.title ? escapeLatex(block.title) : ''
-        const location = block.location ? escapeLatex(block.location) : ''
-        const duration = block.duration ? escapeLatex(block.duration) : ''
+        const title = block.title ? escapeLatex(block.title) : '';
+        const location = block.location ? escapeLatex(block.location) : '';
+        const duration = block.duration ? escapeLatex(block.duration) : '';
   
         doc += String.raw`
   \textbf{${title}} \hfill \textit{${duration}}\\
   \textit{${location}} \\[2pt]
-  `
+  `;
   
-        // Now bullet each line in description
         if (block.description) {
-          const lines = block.description.split('\n').map((l) => l.trim()).filter(Boolean)
+          const lines = block.description.split('\n').map((l) => l.trim()).filter(Boolean);
           for (const line of lines) {
-            doc += `- ${escapeLatex(line)} \\\\\n`
+            doc += `- ${escapeLatex(line)} \\\\\n`;
           }
         }
   
-        // Add some vertical space after each block
-        doc += '\n'
+        doc += '\n';
       }
     }
   
-    // -- 4) Finish the doc
-    doc += defaultLatexPostamble
-    return doc
+    // -- 4) Finish the document
+    doc += "\\end{document}";
+    return doc;
   }
   
