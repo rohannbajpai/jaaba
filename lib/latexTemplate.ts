@@ -8,200 +8,193 @@
  * - duration: e.g. "Aug 2021 -- Dec 2024"
  * - description: multiline string of bullet items (one bullet per line)
  */
-export interface Block {
-    id: string
-    sectionName: string
-    title: string
-    location?: string
-    duration?: string
-    description?: string
-  }
-  
-  /**
-   * This is our modified Jake Gutierrez preamble that produces
-   * the style from your second screenshot:
-   * - Big name + contact at top center
-   * - \section lines with a horizontal rule
-   * - Bold on the left, italics/dates on the right
-   * - Dashes for bullet points
-   */
-  export const defaultLatexPreamble = String.raw`
-  \documentclass[letterpaper,11pt]{article}
-  
-  %--------------------------------------------------
-  % Packages & Basic Setup
-  %--------------------------------------------------
-  \usepackage{latexsym}
-  \usepackage[empty]{fullpage}
-  \usepackage{titlesec}
-  \usepackage{marvosym}    % For symbols like \Mobilefone
-  \usepackage[usenames,dvipsnames]{color}
-  \usepackage{verbatim}
-  \usepackage{enumitem}
-  \usepackage[hidelinks]{hyperref}
-  \usepackage{fancyhdr}
-  \usepackage[english]{babel}
-  \usepackage{tabularx}
-  \input{glyphtounicode}
-  
-  % Page style tweaks
-  \pagestyle{fancy}
-  \fancyhf{}
-  \renewcommand{\headrulewidth}{0pt}
-  \renewcommand{\footrulewidth}{0pt}
-  \urlstyle{same}
-  \raggedbottom
-  \raggedright
-  \setlength{\tabcolsep}{0in}
-  
-  % Make section titles a bit bigger and draw a thin rule
-  \titleformat{\section}{
-    \vspace{-3pt}\scshape\Large
-  }{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
-  
-  % Slightly smaller subsection
-  \titleformat{\subsection}{
-    \vspace{-3pt}\scshape\large
-  }{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
-  
-  % So copy/pasted text remains machine-readable
-  \pdfgentounicode=1
-  
-  % For tighter item spacing
-  \setlist[itemize]{leftmargin=*, label={-}}
-  \setlength\parindent{0pt}
-  
-  \begin{document}
-  `
-  
-  /**
-   * We'll end the document at the bottom.
-   */
-  export const defaultLatexPostamble = String.raw`
-  \end{document}
-  `
-  
-  /**
-   * Helper function to escape LaTeX special characters.
-   * This ensures user text won't break the LaTeX compile.
-   */
-  function escapeLatex(str: string): string {
-    return str
-      // Backslash first!
-      .replace(/\\/g, '\\textbackslash{}')
-      // Then special chars
-      .replace(/%/g, '\\%')
-      .replace(/\$/g, '\\$')
-      .replace(/#/g, '\\#')
-      .replace(/_/g, '\\_')
-      .replace(/{/g, '\\{')
-      .replace(/}/g, '\\}')
-      .replace(/\^/g, '\\^{}')
-      .replace(/~/g, '\\~{}')
-      .replace(/&/g, '\\&')
-  }
-  
-  /**
-   * Generates a .tex document that:
-   *
-   * 1) Looks for a "Header" block to place Name + Contact Info at the top (centered).
-   * 2) For all other blocks, groups them by sectionName ("Education", "Experience", etc.).
-   * 3) Renders them in the style from your second screenshot:
-   *    \section{SECTION NAME}
-   *
-   *    \textbf{Title} \hfill \textit{Duration}\\
-   *    \textit{Location}\\
-   *    - bullet #1
-   *    - bullet #2
-   *    etc.
-   *
-   * 4) Produces a final LaTeX string that Overleaf can compile with no extra macros needed.
-   */
+// latexTemplate.ts
 
-  export function wrapJakeTemplate(blocks: Block[]): string {
-    let doc = `
-      \\documentclass[10pt]{article}
-      \\usepackage[utf8]{inputenc}
-      \\usepackage{hyperref}
-      \\usepackage{xcolor}
-      \\hypersetup{
-        colorlinks=true,
-        linkcolor=blue,
-        urlcolor=blue,
-        filecolor=blue,
-        citecolor=blue
-      }
-      \\usepackage{geometry}
-      \\geometry{margin=0.5in}
-      \\begin{document}
-    `;
-  
-    // -- 1) Process the "Header" block
-    const headerBlock = blocks.find((b) => b.sectionName.toLowerCase() === 'header');
-    if (headerBlock) {
-      const name = headerBlock.title ? escapeLatex(headerBlock.title) : 'Your Name';
-      const phone = headerBlock.phone ? escapeLatex(headerBlock.phone) : 'Your Phone';
-      const email = headerBlock.email
-        ? `\\href{mailto:${escapeLatex(headerBlock.email)}}{${escapeLatex(headerBlock.email)}}`
-        : 'Your Email';
-      const github = headerBlock.github
-        ? `\\href{${escapeLatex(headerBlock.github)}}{${escapeLatex(headerBlock.github)}}`
-        : '';
-      const linkedin = headerBlock.linkedin
-        ? `\\href{${escapeLatex(headerBlock.linkedin)}}{${escapeLatex(headerBlock.linkedin)}}`
-        : '';
-  
-      // Combine all contact details into a single line
-      const contactLine = [phone, email, github, linkedin].filter(Boolean).join(' \\textbar{} ');
-  
-      doc += String.raw`
-  \begin{center}
-      {\Huge \scshape ${name}}\\[4pt]
-      ${contactLine}
-  \end{center}
-  \vspace{-12pt}
-  `;
-    }
-  
-    // -- 2) Process non-header blocks
-    const nonHeaderBlocks = blocks.filter((b) => b.sectionName.toLowerCase() !== 'header');
-  
-    const sectionMap = new Map<string, Block[]>();
-    for (const block of nonHeaderBlocks) {
-      const section = block.sectionName || 'Misc';
-      if (!sectionMap.has(section)) {
-        sectionMap.set(section, []);
-      }
-      sectionMap.get(section)!.push(block);
-    }
-  
-    // -- 3) Render each section
-    for (const [sectionName, sectionBlocks] of sectionMap.entries()) {
-      doc += `\\section{${escapeLatex(sectionName)}}\n\n`;
-  
-      for (const block of sectionBlocks) {
-        const title = block.title ? escapeLatex(block.title) : '';
-        const location = block.location ? escapeLatex(block.location) : '';
-        const duration = block.duration ? escapeLatex(block.duration) : '';
-  
-        doc += String.raw`
-  \textbf{${title}} \hfill \textit{${duration}}\\
-  \textit{${location}} \\[2pt]
-  `;
-  
-        if (block.description) {
-          const lines = block.description.split('\n').map((l) => l.trim()).filter(Boolean);
-          for (const line of lines) {
-            doc += `- ${escapeLatex(line)} \\\\\n`;
-          }
-        }
-  
-        doc += '\n';
-      }
-    }
-  
-    // -- 4) Finish the document
-    doc += "\\end{document}";
-    return doc;
+export interface Block {
+  id: string;
+  sectionName: string;
+  title: string;
+  location?: string;
+  duration?: string;
+  // Header specific
+  phone?: string;
+  email?: string;
+  github?: string;
+  linkedin?: string;
+  // Education specific
+  degree?: string;
+  relevantCourses?: string;
+  activities?: string;
+  // Skills specific
+  languages?: string;
+  other?: string;
+  // Experience and Projects
+  bullets?: string[];
+  technologies?: string;
+}
+
+export const defaultLatexPreamble = String.raw`
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.6in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+\pdfgentounicode=1
+
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
   }
-  
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+`;
+
+export const defaultLatexPostamble = String.raw`
+\end{document}
+`;
+
+function escapeLatex(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/%/g, '\\%')
+    .replace(/\$/g, '\\$')
+    .replace(/#/g, '\\#')
+    .replace(/_/g, '\\_')
+    .replace(/{/g, '\\{')
+    .replace(/}/g, '\\}')
+    .replace(/\^/g, '\\^{}')
+    .replace(/~/g, '\\~{}')
+    .replace(/&/g, '\\&');
+}
+
+export function wrapJakeTemplate(blocks: Block[]): string {
+  let doc = defaultLatexPreamble;
+
+  // Process Header block
+  const headerBlock = blocks.find((b) => b.sectionName.toLowerCase() === 'header');
+  if (headerBlock) {
+    doc += `
+\\begin{center}
+    \\textbf{\\Huge \\scshape ${escapeLatex(headerBlock.title)}} \\\\ \\vspace{1pt}
+    \\small ${escapeLatex(headerBlock.phone)} $|$ 
+    \\href{mailto:${escapeLatex(headerBlock.email || '')}}{\\underline{${escapeLatex(headerBlock.email || '')}}} $|$ 
+    \\href{${escapeLatex(headerBlock.linkedin || '')}}{\\underline{${escapeLatex(headerBlock.linkedin || '')}}} $|$
+    \\href{${escapeLatex(headerBlock.github || '')}}{\\underline{${escapeLatex(headerBlock.github || '')}}}\n
+\\end{center}
+`;
+  }
+
+  // Group blocks by section
+  const sections = new Map<string, Block[]>();
+  blocks
+    .filter(b => b.sectionName.toLowerCase() !== 'header')
+    .forEach(block => {
+      if (!sections.has(block.sectionName)) {
+        sections.set(block.sectionName, []);
+      }
+      sections.get(block.sectionName)!.push(block);
+    });
+
+  // Process each section
+  for (const [sectionName, sectionBlocks] of sections) {
+    doc += `\\section{${escapeLatex(sectionName)}}\n`;
+    doc += `\\resumeSubHeadingListStart\n`;
+
+    for (const block of sectionBlocks) {
+      switch (sectionName.toLowerCase()) {
+        case 'education':
+          doc += `  \\resumeSubheading
+    {${escapeLatex(block.title)}}{${escapeLatex(block.location || '')}}
+    {${escapeLatex(block.degree || '')}}{${escapeLatex(block.duration || '')}}
+    \\begin{itemize}[leftmargin=0in, label={}]
+        \\small{\\item{
+        \\textbf{{Relevant Courses}}{: ${escapeLatex(block.relevantCourses || '')}}
+        
+        \\small\\textbf{{Activities}}{: ${escapeLatex(block.activities || '')}}
+        }}\\vspace*{-6pt}
+    \\end{itemize}\n`;
+          break;
+
+        case 'technical skills':
+          doc += `\\begin{itemize}[leftmargin=0in, label={}]
+    \\small{\\item{
+     \\textbf{Languages}{: ${escapeLatex(block.languages || '')}} \\\\
+     \\textbf{Other}{: ${escapeLatex(block.other || '')}} \\\\
+    }}
+\\end{itemize}\n`;
+          break;
+
+        case 'experience':
+        case 'projects':
+          const roleOrTech = block.sectionName.toLowerCase() === 'projects' 
+            ? block.technologies || ''
+            : block.title;
+            
+          doc += `  \\resumeSubheading
+    {${escapeLatex(block.title)}}{${escapeLatex(block.duration || '')}}
+    {${roleOrTech}}{${escapeLatex(block.location || '')}}
+    \\resumeItemListStart\n`;
+
+          if (block.bullets) {
+            block.bullets.forEach(bullet => {
+              doc += `      \\resumeItem{${escapeLatex(bullet)}}\n`;
+            });
+          }
+
+          doc += `    \\resumeItemListEnd\n\n`;
+          break;
+      }
+    }
+
+    doc += `\\resumeSubHeadingListEnd\n\n`;
+  }
+
+  doc += defaultLatexPostamble;
+  return doc;
+}
