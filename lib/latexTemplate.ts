@@ -106,6 +106,7 @@ export interface Block {
   \end{document}
   `
   
+  
   /** Minimal function to escape LaTeX special characters. */
   function escapeLatex(str: string | undefined): string {
     if (!str) return ""
