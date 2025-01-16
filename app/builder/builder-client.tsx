@@ -1,25 +1,27 @@
+// pages/builder.tsx
 "use client"
 
-import { useState, useCallback, useMemo, useEffect } from "react"
-import { DraggableBlock } from "@/components/editor/DraggableBlock"
-import { EditorCanvas } from "@/components/editor/EditorCanvas"
-import { MarkdownPreview } from "@/components/preview/MarkdownPreview"
-import { Button } from "@/components/ui/button"
-import { wrapJakeTemplate } from "@/lib/latexTemplate"
-import { EditableBlockData } from "@/components/editor/EditableBlock"
-import debounce from "lodash/debounce"
-import { v4 as uuidv4 } from 'uuid'
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { DraggableBlock } from "@/components/editor/DraggableBlock";
+import { EditorCanvas } from "@/components/editor/EditorCanvas";
+import { MarkdownPreview } from "@/components/preview/MarkdownPreview";
+import { Button } from "@/components/ui/button";
+import { wrapJakeTemplate } from "@/lib/latexTemplate";
+import { EditableBlockData } from "@/components/editor/EditableBlock";
+import debounce from "lodash/debounce";
+import { v4 as uuidv4 } from 'uuid';
+import { ItemTypes } from "@/constants/dndTypes";
 
 const libraryBlocks: EditableBlockData[] = [
-  { id: "header-template", sectionName: "Header", title: "", location: "", duration: ""},
-  { id: "education-template", sectionName: "Education", title: "", location: "", duration: ""},
-  { id: "experience-template", sectionName: "Experience", title: "", location: "", duration: ""},
-  { id: "projects-template", sectionName: "Projects", title: "", location: "", duration: ""},
-  { id: "skills-template", sectionName: "Technical Skills", title: "", location: "", duration: ""},
-]
+  { id: "header-template", sectionName: "Header", title: "", location: "", duration: "" },
+  { id: "education-template", sectionName: "Education", title: "", location: "", duration: "" },
+  { id: "experience-template", sectionName: "Experience", title: "", location: "", duration: "" },
+  { id: "projects-template", sectionName: "Projects", title: "", location: "", duration: "" },
+  { id: "skills-template", sectionName: "Technical Skills", title: "", location: "", duration: "" },
+];
 
 export default function BuilderClient() {
-  const [canvasBlocks, setCanvasBlocks] = useState<EditableBlockData[]>([])
+  const [canvasBlocks, setCanvasBlocks] = useState<EditableBlockData[]>([]);
 
   const generateLatexForBlock = useCallback((block: EditableBlockData) => {
     switch (block.sectionName) {
@@ -29,7 +31,7 @@ export default function BuilderClient() {
       case 'Experience':
       case 'Projects':
       case 'Technical Skills':
-        return block.title ? 
+        return block.title ?
           `\\resumeSubheading{${block.title}}{${block.location || ''}}{${block.duration || ''}}` : '';
       default:
         return '';
@@ -71,14 +73,19 @@ export default function BuilderClient() {
   );
 
   const handleDropBlock = (block: EditableBlockData) => {
-    const newBlock = {
-      ...block,
-      id: `${block.sectionName.toLowerCase()}-${uuidv4()}`,
-    }
-    const updatedBlocks = [...canvasBlocks, newBlock]
-    setCanvasBlocks(updatedBlocks)
-    debouncedSaveHandler(updatedBlocks)
-  }
+    setCanvasBlocks(prevBlocks => {
+      const newBlock = {
+        ...block,
+        id: `${block.sectionName.toLowerCase()}-${uuidv4()}`, // Ensure unique ID
+      };
+      const updatedBlocks = [...prevBlocks, newBlock];
+
+      // Save updated blocks
+      debouncedSaveHandler(updatedBlocks);
+
+      return updatedBlocks;
+    });
+  };
 
   const handleBlockUpdate = (id: string, updated: Partial<EditableBlockData>) => {
     const updatedBlocks = canvasBlocks.map((block) => {
@@ -93,7 +100,7 @@ export default function BuilderClient() {
     });
     setCanvasBlocks(updatedBlocks);
     debouncedSaveHandler(updatedBlocks);
-  }
+  };
 
   const generateLatexDocument = () => {
     const formattedBlocks = canvasBlocks.map(block => {
@@ -126,13 +133,29 @@ export default function BuilderClient() {
   const handleCopyLatex = () => {
     navigator.clipboard.writeText(generateLatexDocument())
       .then(() => {
-        alert("LaTeX copied to clipboard. Paste it into Overleaf to compile!")
+        alert("LaTeX copied to clipboard. Paste it into Overleaf to compile!");
       })
       .catch((err) => {
-        console.error(err)
-        alert("Error copying LaTeX.")
-      })
-  }
+        console.error(err);
+        alert("Error copying LaTeX.");
+      });
+  };
+
+  const moveBlock = useCallback((draggedId: string, hoveredId: string) => {
+    const draggedIndex = canvasBlocks.findIndex(block => block.id === draggedId);
+    const hoveredIndex = canvasBlocks.findIndex(block => block.id === hoveredId);
+
+    if (draggedIndex === -1 || hoveredIndex === -1) {
+      return;
+    }
+
+    const updatedBlocks = [...canvasBlocks];
+    const [removed] = updatedBlocks.splice(draggedIndex, 1);
+    updatedBlocks.splice(hoveredIndex, 0, removed);
+
+    setCanvasBlocks(updatedBlocks);
+    debouncedSaveHandler(updatedBlocks);
+  }, [canvasBlocks, debouncedSaveHandler]);
 
   useEffect(() => {
     const loadResume = async () => {
@@ -141,7 +164,7 @@ export default function BuilderClient() {
         if (response.ok) {
           const data = await response.json();
           if (data.resume?.blocks?.length > 0) {
-            const sortedBlocks = [...data.resume.blocks].sort((a, b) => a.order - b.order);
+            const sortedBlocks: Array<EditableBlockData> = [...data.resume.blocks].sort((a, b) => a.order - b.order);
             setCanvasBlocks(sortedBlocks);
           }
         }
@@ -171,6 +194,7 @@ export default function BuilderClient() {
           blocks={canvasBlocks}
           onDropBlock={handleDropBlock}
           onBlockUpdate={handleBlockUpdate}
+          moveBlock={moveBlock}
         />
       </div>
 
@@ -182,5 +206,5 @@ export default function BuilderClient() {
         </Button>
       </div>
     </main>
-  )
-} 
+  );
+}
