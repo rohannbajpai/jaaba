@@ -1,31 +1,43 @@
-"use client"
-
-import { useDrop } from "react-dnd"
-import { EditableBlock, EditableBlockData } from "./EditableBlock"
-import type { Ref } from 'react'
+// components/editor/EditorCanvas.tsx
+import { useDrop } from "react-dnd";
+import { EditableBlock, EditableBlockData } from "./EditableBlock";
+import React, { Ref } from "react";
+import { ItemTypes } from "@/constants/dndTypes";
 
 interface EditorCanvasProps {
-  blocks: EditableBlockData[]
-  onDropBlock: (block: EditableBlockData) => void
-  onBlockUpdate: (id: string, updated: Partial<EditableBlockData>) => void
+  blocks: EditableBlockData[];
+  onDropBlock: (block: EditableBlockData) => void;
+  onBlockUpdate: (id: string, updated: Partial<EditableBlockData>) => void;
+  moveBlock: (draggedId: string, hoveredId: string) => void;
+  onDelete: (id: string) => void;
 }
 
-export function EditorCanvas({ blocks, onDropBlock, onBlockUpdate }: EditorCanvasProps) {
-  const [{ isOver }, dropRef] = useDrop<EditableBlockData, void, { isOver: boolean }>(() => ({
-    accept: 'BLOCK',
-    drop: (item) => {
-      onDropBlock(item)
+export function EditorCanvas({
+  blocks,
+  onDropBlock,
+  onBlockUpdate,
+  moveBlock,
+  onDelete,
+}: EditorCanvasProps) {
+  const [{ isOver }, dropRef] = useDrop({
+    accept: ItemTypes.BLOCK,
+    drop: (item: EditableBlockData) => {
+      // If the dropped block is not already in the canvas, add it
+      const existingBlock = blocks.find((block) => block.id === item.id);
+      if (!existingBlock) {
+        onDropBlock(item);
+      }
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
     }),
-  }), [onDropBlock])
+  });
 
   return (
     <div
       ref={dropRef as unknown as Ref<HTMLDivElement>}
       className={`min-h-[400px] p-4 border-2 border-dashed rounded-lg ${
-        isOver ? 'border-primary bg-primary/5' : 'border-gray-200'
+        isOver ? "border-primary bg-primary/5" : "border-gray-200"
       }`}
     >
       {blocks.length === 0 ? (
@@ -38,11 +50,13 @@ export function EditorCanvas({ blocks, onDropBlock, onBlockUpdate }: EditorCanva
             <EditableBlock
               key={block.id}
               block={block}
-              onUpdate={(updated) => onBlockUpdate(block.id, updated)}
+              onUpdate={onBlockUpdate}
+              moveBlock={moveBlock}
+              onDelete={onDelete}
             />
           ))}
         </div>
       )}
     </div>
-  )
+  );
 }

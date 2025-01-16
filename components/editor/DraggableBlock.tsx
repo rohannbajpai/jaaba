@@ -1,38 +1,37 @@
-"use client"
+// components/editor/DraggableBlock.tsx
+"use client";
 
-import { useDrag } from "react-dnd"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { EditableBlockData } from "./EditableBlock"
-import { useRef, useEffect } from "react"
+import { useDrag } from "react-dnd";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { EditableBlockData } from "./EditableBlock";
+import React, { useRef, useEffect } from "react";
+import { ItemTypes } from "@/constants/dndTypes";
 
 interface DraggableBlockProps {
-  block: EditableBlockData
+  block: EditableBlockData;
 }
 
 export function DraggableBlock({ block }: DraggableBlockProps) {
   const [{ isDragging }, dragRef] = useDrag(() => ({
-    type: "BLOCK",
-    item: {
-      ...block,
-      id: `${block.sectionName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    },
+    type: ItemTypes.BLOCK,
+    item: { ...block }, // Pass the entire block data
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-  }))
+  }));
 
-  const cardRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (cardRef.current) {
-      dragRef(cardRef.current)
+      dragRef(cardRef.current);
     }
-  }, [dragRef])
+  }, [dragRef]);
 
   return (
     <Card
       ref={cardRef}
-      className={`mb-2 cursor-move transition-opacity border ${
+      className={`mb-2 cursor-grab transition-opacity border ${
         isDragging ? "opacity-50" : "opacity-100"
       }`}
     >
@@ -45,5 +44,5 @@ export function DraggableBlock({ block }: DraggableBlockProps) {
         </p>
       </CardContent>
     </Card>
-  )
+  );
 }

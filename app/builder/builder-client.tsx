@@ -1,26 +1,147 @@
-"use client"
+// pages/builder.tsx
+"use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react"
-import { DraggableBlock } from "@/components/editor/DraggableBlock"
-import { EditorCanvas } from "@/components/editor/EditorCanvas"
-import { MarkdownPreview } from "@/components/preview/MarkdownPreview"
-import { Button } from "@/components/ui/button"
-import { wrapJakeTemplate } from "@/lib/latexTemplate"
-import { EditableBlockData } from "@/components/editor/EditableBlock"
-import debounce from "lodash/debounce"
-import { v4 as uuidv4 } from 'uuid'
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { DraggableBlock } from "@/components/editor/DraggableBlock";
+import { EditorCanvas } from "@/components/editor/EditorCanvas";
+import { MarkdownPreview } from "@/components/preview/MarkdownPreview";
+import { Button } from "@/components/ui/button";
+import { wrapJakeTemplate } from "@/lib/latexTemplate";
+import { EditableBlockData } from "@/components/editor/EditableBlock";
+import debounce from "lodash/debounce";
+import { v4 as uuidv4 } from 'uuid';
 
 const libraryBlocks: EditableBlockData[] = [
-  { id: "header-template", sectionName: "Header", title: "", location: "", duration: ""},
-  { id: "education-template", sectionName: "Education", title: "", location: "", duration: ""},
-  { id: "experience-template", sectionName: "Experience", title: "", location: "", duration: ""},
-  { id: "projects-template", sectionName: "Projects", title: "", location: "", duration: ""},
-  { id: "skills-template", sectionName: "Technical Skills", title: "", location: "", duration: ""},
-]
+  // ------------------------------
+  // HEADER
+  // ------------------------------
+  {
+    id: `header-template-${uuidv4()}`,
+    sectionName: "Header",
+    title: "",
+    phone: "",
+    email: "",
+    github: "",
+    linkedin: "",
+    location: "",
+    duration: "",
+    degree: undefined,
+    relevantCourses: undefined,
+    activities: undefined,
+    languages: undefined,
+    other: undefined,
+    bullets: undefined,
+    role: undefined,
+    projectName: undefined,
+    technologies: undefined,
+    projectBullets: undefined,
+  },
+  
+  // ------------------------------
+  // EDUCATION
+  // ------------------------------
+  {
+    id: `education-template-${uuidv4()}`,
+    sectionName: "Education",
+    title: "",
+    location: "",
+    duration: "",
+    degree: "",
+    relevantCourses: "",
+    activities: "",
+    phone: undefined,
+    email: undefined,
+    github: undefined,
+    linkedin: undefined,
+    languages: undefined,
+    other: undefined,
+    bullets: undefined,
+    role: undefined,
+    projectName: undefined,
+    technologies: undefined,
+    projectBullets: undefined,
+  },
+  
+  // ------------------------------
+  // EXPERIENCE
+  // ------------------------------
+  {
+    id: `experience-template-${uuidv4()}`,
+    sectionName: "Experience",
+    title: "",
+    location: "",
+    duration: "",
+    role: "",
+    bullets: [],
+    phone: undefined,
+    email: undefined,
+    github: undefined,
+    linkedin: undefined,
+    degree: undefined,
+    relevantCourses: undefined,
+    activities: undefined,
+    languages: undefined,
+    other: undefined,
+    projectName: undefined,
+    technologies: undefined,
+    projectBullets: undefined,
+  },
+  
+  // ------------------------------
+  // PROJECTS
+  // ------------------------------
+  {
+    id: `projects-template-${uuidv4()}`,
+    sectionName: "Projects",
+    title: "",
+    technologies: "",
+    duration: "",
+    projectBullets: [],
+    location: "",
+    phone: undefined,
+    email: undefined,
+    github: undefined,
+    linkedin: undefined,
+    degree: undefined,
+    relevantCourses: undefined,
+    activities: undefined,
+    languages: undefined,
+    other: undefined,
+    bullets: undefined,
+    role: undefined,
+    projectName: undefined,
+  },
+  
+  // ------------------------------
+  // TECHNICAL SKILLS
+  // ------------------------------
+  {
+    id: `skills-template-${uuidv4()}`,
+    sectionName: "Technical Skills",
+    languages: "",
+    other: "",
+    title: "",
+    location: "",
+    duration: "",
+    phone: undefined,
+    email: undefined,
+    github: undefined,
+    linkedin: undefined,
+    degree: undefined,
+    relevantCourses: undefined,
+    activities: undefined,
+    bullets: undefined,
+    role: undefined,
+    projectName: undefined,
+    technologies: undefined,
+    projectBullets: undefined,
+  },
+];
 
 export default function BuilderClient() {
-  const [canvasBlocks, setCanvasBlocks] = useState<EditableBlockData[]>([])
+  const [canvasBlocks, setCanvasBlocks] = useState<EditableBlockData[]>([]);
 
+  // Function to generate LaTeX code for each block
   const generateLatexForBlock = useCallback((block: EditableBlockData) => {
     switch (block.sectionName) {
       case 'Header':
@@ -29,13 +150,14 @@ export default function BuilderClient() {
       case 'Experience':
       case 'Projects':
       case 'Technical Skills':
-        return block.title ? 
+        return block.title ?
           `\\resumeSubheading{${block.title}}{${block.location || ''}}{${block.duration || ''}}` : '';
       default:
         return '';
     }
   }, []);
 
+  // Debounced function to save resume data
   const debouncedSave = useCallback(
     async (blocks: EditableBlockData[]) => {
       try {
@@ -57,6 +179,8 @@ export default function BuilderClient() {
 
         if (!response.ok) {
           console.error('Failed to save resume');
+        } else {
+          console.log('Resume saved successfully.');
         }
       } catch (error) {
         console.error('Error saving resume:', error);
@@ -70,32 +194,76 @@ export default function BuilderClient() {
     [debouncedSave]
   );
 
-  const handleDropBlock = (block: EditableBlockData) => {
-    const newBlock = {
-      ...block,
-      id: `${block.sectionName.toLowerCase()}-${uuidv4()}`,
-    }
-    const updatedBlocks = [...canvasBlocks, newBlock]
-    setCanvasBlocks(updatedBlocks)
-    debouncedSaveHandler(updatedBlocks)
-  }
+  // Handler to add new blocks from the library
+  const handleDropBlock = useCallback((block: EditableBlockData) => {
+    setCanvasBlocks(prevBlocks => {
+      const newBlock = {
+        ...block,
+        id: `${block.sectionName.toLowerCase()}-${uuidv4()}`, // Ensure unique ID
+      };
+      const updatedBlocks = [...prevBlocks, newBlock];
+      
+      // Save updated blocks
+      debouncedSaveHandler(updatedBlocks);
 
-  const handleBlockUpdate = (id: string, updated: Partial<EditableBlockData>) => {
-    const updatedBlocks = canvasBlocks.map((block) => {
-      if (block.id === id) {
-        const updatedBlock = { ...block, ...updated };
-        return {
-          ...updatedBlock,
-          latexCode: generateLatexForBlock(updatedBlock)
-        };
-      }
-      return block;
+      return updatedBlocks;
     });
-    setCanvasBlocks(updatedBlocks);
-    debouncedSaveHandler(updatedBlocks);
-  }
+  }, [debouncedSaveHandler]);
 
-  const generateLatexDocument = () => {
+  // Handler to update existing blocks
+  const handleBlockUpdate = useCallback((id: string, updated: Partial<EditableBlockData>) => {
+    setCanvasBlocks(prevBlocks => {
+      const updatedBlocks = prevBlocks.map((block) => {
+        if (block.id === id) {
+          const updatedBlock = { ...block, ...updated };
+          return {
+            ...updatedBlock,
+            latexCode: generateLatexForBlock(updatedBlock)
+          };
+        }
+        return block;
+      });
+      // Save updated blocks
+      debouncedSaveHandler(updatedBlocks);
+      return updatedBlocks;
+    });
+  }, [debouncedSaveHandler, generateLatexForBlock]);
+
+  // Handler to delete a block
+  const handleDeleteBlock = useCallback((id: string) => {
+    setCanvasBlocks(prevBlocks => {
+      const updatedBlocks = prevBlocks.filter(block => block.id !== id);
+      
+      // Save updated blocks
+      debouncedSaveHandler(updatedBlocks);
+
+      return updatedBlocks;
+    });
+  }, [debouncedSaveHandler]);
+
+  // Refactored moveBlock function
+  const moveBlock = useCallback((draggedId: string, hoveredId: string) => {
+    setCanvasBlocks(prevBlocks => {
+      const draggedIndex = prevBlocks.findIndex(block => block.id === draggedId);
+      const hoveredIndex = prevBlocks.findIndex(block => block.id === hoveredId);
+
+      if (draggedIndex === -1 || hoveredIndex === -1 || draggedIndex === hoveredIndex) {
+        return prevBlocks; // No change needed
+      }
+
+      const updatedBlocks = [...prevBlocks];
+      const [removed] = updatedBlocks.splice(draggedIndex, 1);
+      updatedBlocks.splice(hoveredIndex, 0, removed);
+
+      // Save updated blocks
+      debouncedSaveHandler(updatedBlocks);
+
+      return updatedBlocks;
+    });
+  }, [debouncedSaveHandler]);
+
+  // Function to generate the complete LaTeX document
+  const generateLatexDocument = useCallback(() => {
     const formattedBlocks = canvasBlocks.map(block => {
       const baseBlock = {
         ...block,
@@ -110,10 +278,10 @@ export default function BuilderClient() {
       if (block.sectionName === 'Header') {
         return {
           ...baseBlock,
-          phone: block.location,
-          email: block.duration,
-          github: '',
-          linkedin: '',
+          phone: block.phone,
+          email: block.email,
+          github: block.github,
+          linkedin: block.linkedin,
         };
       }
 
@@ -121,19 +289,21 @@ export default function BuilderClient() {
     });
 
     return wrapJakeTemplate(formattedBlocks);
-  };
+  }, [canvasBlocks]);
 
-  const handleCopyLatex = () => {
+  // Handler to copy LaTeX code to clipboard
+  const handleCopyLatex = useCallback(() => {
     navigator.clipboard.writeText(generateLatexDocument())
       .then(() => {
-        alert("LaTeX copied to clipboard. Paste it into Overleaf to compile!")
+        alert("LaTeX copied to clipboard. Paste it into Overleaf to compile!");
       })
       .catch((err) => {
-        console.error(err)
-        alert("Error copying LaTeX.")
-      })
-  }
+        console.error(err);
+        alert("Error copying LaTeX.");
+      });
+  }, [generateLatexDocument]);
 
+  // Load resume data from the backend on mount
   useEffect(() => {
     const loadResume = async () => {
       try {
@@ -141,7 +311,7 @@ export default function BuilderClient() {
         if (response.ok) {
           const data = await response.json();
           if (data.resume?.blocks?.length > 0) {
-            const sortedBlocks = [...data.resume.blocks].sort((a, b) => a.order - b.order);
+            const sortedBlocks: Array<EditableBlockData> = [...data.resume.blocks].sort((a, b) => a.order - b.order);
             setCanvasBlocks(sortedBlocks);
           }
         }
@@ -155,6 +325,7 @@ export default function BuilderClient() {
 
   return (
     <main className="flex flex-col md:flex-row gap-4 p-4">
+      {/* Block Library */}
       <div className="w-full md:w-1/4">
         <h2 className="text-xl font-bold mb-2">Block Library</h2>
         <p className="text-sm text-gray-600 mb-3">
@@ -165,15 +336,19 @@ export default function BuilderClient() {
         ))}
       </div>
 
+      {/* Editor Canvas */}
       <div className="w-full md:w-1/2">
         <h2 className="text-xl font-bold mb-2">Editor Canvas</h2>
         <EditorCanvas
           blocks={canvasBlocks}
           onDropBlock={handleDropBlock}
           onBlockUpdate={handleBlockUpdate}
+          moveBlock={moveBlock}
+          onDelete={handleDeleteBlock} // Pass the delete handler
         />
       </div>
 
+      {/* Preview Section */}
       <div className="w-full md:w-1/4">
         <h2 className="text-xl font-bold mb-2">Preview</h2>
         <MarkdownPreview content={generateLatexDocument()} />
@@ -182,5 +357,5 @@ export default function BuilderClient() {
         </Button>
       </div>
     </main>
-  )
-} 
+  );
+}
