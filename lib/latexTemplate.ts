@@ -2,6 +2,8 @@
 // latexTemplate.ts
 // ----------------------------
 
+import { BlockList } from "net";
+
 /**
  * The "Block" interface for each résumé section.
  * Must match the shape from EditableBlockData,
@@ -103,7 +105,7 @@ export interface Block {
       \end{tabular*}\vspace{-7pt}
   }
   
-  \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in]}
+  \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
   \newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
   \newcommand{\resumeItemListStart}{\begin{itemize}}
   \newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
@@ -176,30 +178,28 @@ export interface Block {
           // EDUCATION
           case "education":
             doc += String.raw`
-  \resumeSubheading
-  {${escapeLatex(block.title)}}{${escapeLatex(block.location)}}
-  {${escapeLatex(block.degree)}}{${escapeLatex(block.duration)}}
-  \begin{itemize}[leftmargin=0in]
-    \small{
-      \item \textbf{Relevant Courses}: ${escapeLatex(block.relevantCourses)} \\
-      \item \textbf{Activities}: ${escapeLatex(block.activities)}
-    }\vspace*{-6pt}
-  \end{itemize}
-  
-  `
+              \resumeSubheading
+              {${escapeLatex(block.title)}}{${escapeLatex(block.location)}}
+              {${escapeLatex(block.degree)}}{${escapeLatex(block.duration)}}
+              \begin{itemize}[leftmargin=0in, label={}]
+                \small{
+                  ${block.relevantCourses ? `\\item \\textbf{Relevant Courses}: ${escapeLatex(block.relevantCourses)} \\\\` : ''}
+                  ${block.activities ? `\\item \\textbf{Activities}: ${escapeLatex(block.activities)}` : ''}
+                }\vspace*{-6pt}
+              \end{itemize}
+              `
             break
   
           // TECHNICAL SKILLS
           case "technical skills":
             doc += String.raw`
-  \begin{itemize}[leftmargin=0in]
-    \small{
-      \item \textbf{Languages}: ${escapeLatex(block.languages)} \\
-      \item \textbf{Other}: ${escapeLatex(block.other)}
-    }
-  \end{itemize}
-  
-  `
+            \begin{itemize}[leftmargin=0in, label={}]
+              \small{
+                ${block.languages ? `\\item \\textbf{Languages}: ${escapeLatex(block.languages)} \\\\` : ''}
+                ${block.other ? `\\item \\textbf{Other}: ${escapeLatex(block.other)}` : ''}
+              }
+            \end{itemize}
+            `
             break
   
           // EXPERIENCE
