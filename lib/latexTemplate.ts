@@ -103,7 +103,7 @@ export interface Block {
       \end{tabular*}\vspace{-7pt}
   }
   
-  \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in}
+  \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in]}
   \newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
   \newcommand{\resumeItemListStart}{\begin{itemize}}
   \newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
