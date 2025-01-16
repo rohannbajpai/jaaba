@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Navigation */}
       <nav className="border-b bg-white/50 backdrop-blur-sm fixed w-full z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -90,7 +90,7 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t">
+      <footer className="bg-white border-t mt-auto">
         <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
