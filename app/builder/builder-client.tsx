@@ -159,6 +159,7 @@ export default function BuilderClient() {
 
   // Debounced function to save resume data
   const debouncedSave = useCallback(
+   
     async (blocks: EditableBlockData[]) => {
       try {
         const blocksWithLatex = blocks.map((block, index) => ({
@@ -179,8 +180,6 @@ export default function BuilderClient() {
 
         if (!response.ok) {
           console.error('Failed to save resume');
-        } else {
-          console.log('Resume saved successfully.');
         }
       } catch (error) {
         console.error('Error saving resume:', error);
@@ -202,11 +201,7 @@ export default function BuilderClient() {
         id: `${block.sectionName.toLowerCase()}-${uuidv4()}`, // Ensure unique ID
       };
       const updatedBlocks = [...prevBlocks, newBlock];
-
-      // Debugging: Log the addition
-      console.log(`Added new block: ${newBlock.id}`);
-      console.log("Updated blocks:", updatedBlocks.map(b => b.id));
-
+      
       // Save updated blocks
       debouncedSaveHandler(updatedBlocks);
 
@@ -227,11 +222,6 @@ export default function BuilderClient() {
         }
         return block;
       });
-      
-      // Debugging: Log the update
-      console.log(`Updated block: ${id}`);
-      console.log("Updated blocks:", updatedBlocks.map(b => b.id));
-
       // Save updated blocks
       debouncedSaveHandler(updatedBlocks);
       return updatedBlocks;
@@ -251,10 +241,6 @@ export default function BuilderClient() {
       const updatedBlocks = [...prevBlocks];
       const [removed] = updatedBlocks.splice(draggedIndex, 1);
       updatedBlocks.splice(hoveredIndex, 0, removed);
-
-      // Debugging: Log the new order
-      console.log(`Moved block ${draggedId} before ${hoveredId}`);
-      console.log("New block order:", updatedBlocks.map(b => b.id));
 
       // Save updated blocks
       debouncedSaveHandler(updatedBlocks);
@@ -314,7 +300,6 @@ export default function BuilderClient() {
           if (data.resume?.blocks?.length > 0) {
             const sortedBlocks: Array<EditableBlockData> = [...data.resume.blocks].sort((a, b) => a.order - b.order);
             setCanvasBlocks(sortedBlocks);
-            console.log("Loaded resume blocks:", sortedBlocks.map(b => b.id));
           }
         }
       } catch (error) {

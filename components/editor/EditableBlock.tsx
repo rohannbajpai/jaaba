@@ -4,7 +4,7 @@
 import { useDrag, useDrop, DropTargetMonitor } from "react-dnd";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import React, { useRef, useEffect } from "react";
+import React, { useRef } from "react";
 import { ItemTypes } from "@/constants/dndTypes";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
