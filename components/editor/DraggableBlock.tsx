@@ -1,5 +1,5 @@
 // components/editor/DraggableBlock.tsx
-"use client"
+"use client";
 
 import { useDrag } from "react-dnd";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";

@@ -1,6 +1,4 @@
 // components/editor/EditorCanvas.tsx
-"use client"
-
 import { useDrop } from "react-dnd";
 import { EditableBlock, EditableBlockData } from "./EditableBlock";
 import React, { Ref } from "react";
@@ -22,7 +20,7 @@ export function EditorCanvas({
   const [{ isOver }, dropRef] = useDrop({
     accept: ItemTypes.BLOCK,
     drop: (item: EditableBlockData) => {
-      // Check if the block is already in the canvas
+      // If the dropped block is not already in the canvas, add it
       const existingBlock = blocks.find((block) => block.id === item.id);
       if (!existingBlock) {
         onDropBlock(item);
@@ -50,7 +48,7 @@ export function EditorCanvas({
             <EditableBlock
               key={block.id}
               block={block}
-              onUpdate={(updated) => onBlockUpdate(block.id, updated)}
+              onUpdate={onBlockUpdate}
               moveBlock={moveBlock}
             />
           ))}
