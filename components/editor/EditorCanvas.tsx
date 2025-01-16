@@ -9,6 +9,7 @@ interface EditorCanvasProps {
   onDropBlock: (block: EditableBlockData) => void;
   onBlockUpdate: (id: string, updated: Partial<EditableBlockData>) => void;
   moveBlock: (draggedId: string, hoveredId: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export function EditorCanvas({
@@ -16,6 +17,7 @@ export function EditorCanvas({
   onDropBlock,
   onBlockUpdate,
   moveBlock,
+  onDelete,
 }: EditorCanvasProps) {
   const [{ isOver }, dropRef] = useDrop({
     accept: ItemTypes.BLOCK,
@@ -50,6 +52,7 @@ export function EditorCanvas({
               block={block}
               onUpdate={onBlockUpdate}
               moveBlock={moveBlock}
+              onDelete={onDelete}
             />
           ))}
         </div>

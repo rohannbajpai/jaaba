@@ -1,5 +1,5 @@
 // pages/builder.tsx
-"use client"
+"use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { DraggableBlock } from "@/components/editor/DraggableBlock";
@@ -159,7 +159,6 @@ export default function BuilderClient() {
 
   // Debounced function to save resume data
   const debouncedSave = useCallback(
-   
     async (blocks: EditableBlockData[]) => {
       try {
         const blocksWithLatex = blocks.map((block, index) => ({
@@ -180,6 +179,8 @@ export default function BuilderClient() {
 
         if (!response.ok) {
           console.error('Failed to save resume');
+        } else {
+          console.log('Resume saved successfully.');
         }
       } catch (error) {
         console.error('Error saving resume:', error);
@@ -227,6 +228,18 @@ export default function BuilderClient() {
       return updatedBlocks;
     });
   }, [debouncedSaveHandler, generateLatexForBlock]);
+
+  // Handler to delete a block
+  const handleDeleteBlock = useCallback((id: string) => {
+    setCanvasBlocks(prevBlocks => {
+      const updatedBlocks = prevBlocks.filter(block => block.id !== id);
+      
+      // Save updated blocks
+      debouncedSaveHandler(updatedBlocks);
+
+      return updatedBlocks;
+    });
+  }, [debouncedSaveHandler]);
 
   // Refactored moveBlock function
   const moveBlock = useCallback((draggedId: string, hoveredId: string) => {
@@ -331,6 +344,7 @@ export default function BuilderClient() {
           onDropBlock={handleDropBlock}
           onBlockUpdate={handleBlockUpdate}
           moveBlock={moveBlock}
+          onDelete={handleDeleteBlock} // Pass the delete handler
         />
       </div>
 

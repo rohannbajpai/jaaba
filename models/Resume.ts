@@ -36,12 +36,17 @@ export interface EditableBlockData {
   projectBullets?: string[];
 }
 
+interface ResumeDocument extends Document {
+  username: string;
+  blocks: EditableBlockData[];
+  updatedAt: Date;
+}
+
 /** Mongoose schema for each résumé block. */
 const BlockSchema = new mongoose.Schema<EditableBlockData>({
   id: {
     type: String,
     required: true,
-    unique: true, // Ensures each block has a unique identifier
   },
   sectionName: {
     type: String,
@@ -181,6 +186,9 @@ const ResumeSchema = new mongoose.Schema(
   }
 );
 
+// Add a compound unique index on username and blocks.id
+ResumeSchema.index({ username: 1, "blocks.id": 1 }, { unique: true });
+
 // Export the Resume model, avoiding recompilation errors in watch mode
 export default mongoose.models.Resume ||
-  mongoose.model<Document>('Resume', ResumeSchema);
+  mongoose.model<ResumeDocument>('Resume', ResumeSchema);
