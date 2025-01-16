@@ -34,6 +34,10 @@ export interface EditableBlockData {
   projectName?: string; // e.g., "Portfolio Website"
   technologies?: string;
   projectBullets?: string[];
+
+  latexCode?: string;
+  order?: BigInteger;
+  updatedAt?: Date;
 }
 
 interface ResumeDocument extends Document {

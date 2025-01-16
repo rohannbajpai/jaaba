@@ -72,12 +72,12 @@ export function EditableBlock({
   // Setup drop
   const [, drop] = useDrop({
     accept: ItemTypes.BLOCK,
-    hover(item: { id: string }, monitor: DropTargetMonitor) {
+    hover(item: unknown, monitor: DropTargetMonitor) {
       if (!ref.current) {
         return;
       }
 
-      const draggedId = item.id;
+      const draggedId: string = (item as {id: string}).id
       const hoveredId = block.id;
 
       if (draggedId === hoveredId) {
