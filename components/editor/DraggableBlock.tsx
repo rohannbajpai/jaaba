@@ -11,8 +11,11 @@ interface DraggableBlockProps {
 
 export function DraggableBlock({ block }: DraggableBlockProps) {
   const [{ isDragging }, dragRef] = useDrag(() => ({
-    type: "RESUME_BLOCK",
-    item: block, // We'll clone it on drop
+    type: "BLOCK",
+    item: {
+      ...block,
+      id: `${block.sectionName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),

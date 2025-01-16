@@ -2,8 +2,6 @@
 
 import { useDrop } from "react-dnd"
 import { EditableBlock, EditableBlockData } from "./EditableBlock"
-import { Card } from "@/components/ui/card"
-import { useRef, useEffect } from "react"
 
 interface EditorCanvasProps {
   blocks: EditableBlockData[]
@@ -11,50 +9,39 @@ interface EditorCanvasProps {
   onBlockUpdate: (id: string, updated: Partial<EditableBlockData>) => void
 }
 
-export function EditorCanvas({
-  blocks,
-  onDropBlock,
-  onBlockUpdate,
-}: EditorCanvasProps) {
-  const [{ isOver }, dropRef] = useDrop(() => ({
-    accept: "RESUME_BLOCK",
-    drop: (item: EditableBlockData, monitor) => {
-      if (!monitor.didDrop()) {
-        onDropBlock(item)
-      }
+export function EditorCanvas({ blocks, onDropBlock, onBlockUpdate }: EditorCanvasProps) {
+  const [{ isOver }, drop] = useDrop(() => ({
+    accept: 'BLOCK',
+    drop: (item: EditableBlockData) => {
+      onDropBlock(item)
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
     }),
-  }))
-
-  const canvasRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (canvasRef.current) {
-      dropRef(canvasRef.current)
-    }
-  }, [dropRef])
+  }), [onDropBlock])
 
   return (
     <div
-      ref={canvasRef}
-      className={`border-2 border-dashed p-4 min-h-[400px] ${
-        isOver ? "bg-blue-50" : ""
+      ref={drop}
+      className={`min-h-[400px] p-4 border-2 border-dashed rounded-lg ${
+        isOver ? 'border-primary bg-primary/5' : 'border-gray-200'
       }`}
     >
-      {blocks.length === 0 && (
-        <p className="text-gray-400">
-          Drag a block here to start building your résumé
-        </p>
+      {blocks.length === 0 ? (
+        <div className="h-full flex items-center justify-center text-gray-500">
+          Drop blocks here to build your resume
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {blocks.map((block) => (
+            <EditableBlock
+              key={block.id}
+              block={block}
+              onUpdate={(updated) => onBlockUpdate(block.id, updated)}
+            />
+          ))}
+        </div>
       )}
-
-      {blocks.map((block) => (
-        <Card key={block.id} className="mb-4 p-2 border relative bg-white">
-          <div className="text-xs uppercase text-gray-500">{block.sectionName}</div>
-          <EditableBlock block={block} onChange={onBlockUpdate} />
-        </Card>
-      ))}
     </div>
   )
 }
