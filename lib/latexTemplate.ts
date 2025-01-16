@@ -8,37 +8,46 @@
  * but we only need the fields we actually use in LaTeX.
  */
 export interface Block {
-    id: string
-    sectionName: string
-    title: string
-    location?: string
-    duration?: string
-  
-    phone?: string
-    email?: string
-    github?: string
-    linkedin?: string
-  
-    degree?: string
-    relevantCourses?: string
-    activities?: string
-  
-    languages?: string
-    other?: string
-  
-    bullets?: string[]
-    role?: string
-  
-    projectName?: string
-    projectBullets?: string[]
-    technologies?: string
-  }
+  id: string;
+  sectionName: string;
+
+  /* Common fields */
+  title: string;
+  location?: string;
+  duration?: string;
+
+  /* Header-specific */
+  phone?: string;
+  email?: string;
+  github?: string;
+  linkedin?: string;
+
+  /* Education-specific */
+  degree?: string;
+  relevantCourses?: string;
+  activities?: string;
+
+  /* Skills-specific */
+  languages?: string;
+  other?: string;
+
+  /* Experience-specific */
+  bullets?: string[]; // bullet points
+  role?: string; // e.g., "Software Engineer Intern"
+
+  /* Projects-specific */
+  projectName?: string; // e.g., "Portfolio Website"
+  technologies?: string;
+  projectBullets?: string[];
+}
   
   /**
    * Jake Gutierrez–style LaTeX preamble
    */
   export const defaultLatexPreamble = String.raw`
   \documentclass[letterpaper,11pt]{article}
+  \usepackage{enumitem}
+
   
   \usepackage{latexsym}
   \usepackage[empty]{fullpage}
@@ -94,7 +103,7 @@ export interface Block {
       \end{tabular*}\vspace{-7pt}
   }
   
-  \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+  \newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in}
   \newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
   \newcommand{\resumeItemListStart}{\begin{itemize}}
   \newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
@@ -170,7 +179,7 @@ export interface Block {
   \resumeSubheading
   {${escapeLatex(block.title)}}{${escapeLatex(block.location)}}
   {${escapeLatex(block.degree)}}{${escapeLatex(block.duration)}}
-  \begin{itemize}[leftmargin=0in, label={}]
+  \begin{itemize}[leftmargin=0in]
     \small{
       \item \textbf{Relevant Courses}: ${escapeLatex(block.relevantCourses)} \\
       \item \textbf{Activities}: ${escapeLatex(block.activities)}
@@ -183,7 +192,7 @@ export interface Block {
           // TECHNICAL SKILLS
           case "technical skills":
             doc += String.raw`
-  \begin{itemize}[leftmargin=0in, label={}]
+  \begin{itemize}[leftmargin=0in]
     \small{
       \item \textbf{Languages}: ${escapeLatex(block.languages)} \\
       \item \textbf{Other}: ${escapeLatex(block.other)}

@@ -265,29 +265,28 @@ export default function BuilderClient() {
   // Function to generate the complete LaTeX document
   const generateLatexDocument = useCallback(() => {
     const formattedBlocks = canvasBlocks.map(block => {
-      const baseBlock = {
-        ...block,
-        degree: block.title,
-        role: block.title,
-        projectName: block.title,
-        bullets: [],
-        languages: block.title,
-        other: block.location,
-      };
-
+      // Clone the block to avoid mutating the original state
+      const formattedBlock = { ...block };
+      
+      // Only modify fields as necessary
       if (block.sectionName === 'Header') {
-        return {
-          ...baseBlock,
-          phone: block.phone,
-          email: block.email,
-          github: block.github,
-          linkedin: block.linkedin,
-        };
+        // Header already contains all necessary fields
+        // No additional modifications required
+      } else if (block.sectionName === 'Education') {
+        // No changes needed; fields are correctly set
+      } else if (block.sectionName === 'Experience') {
+        // Ensure bullets are present; default to empty array if undefined
+        formattedBlock.bullets = block.bullets || [];
+      } else if (block.sectionName === 'Projects') {
+        // Ensure projectBullets are present; default to empty array if undefined
+        formattedBlock.projectBullets = block.projectBullets || [];
+      } else if (block.sectionName === 'Technical Skills') {
+        // No changes needed; fields are correctly set
       }
-
-      return baseBlock;
+    
+      return formattedBlock;
     });
-
+    
     return wrapJakeTemplate(formattedBlocks);
   }, [canvasBlocks]);
 
