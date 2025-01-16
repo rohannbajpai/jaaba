@@ -8,6 +8,8 @@ const sectionTemplates: EditableBlockData[] = [
     id: 'template-header',
     sectionName: 'Header',
     title: '',
+    location: '',
+    duration: '',
     phone: '',
     email: '',
     github: '',
@@ -28,6 +30,8 @@ const sectionTemplates: EditableBlockData[] = [
     id: 'template-skills',
     sectionName: 'Technical Skills',
     title: 'Technical Skills',
+    location: '',
+    duration: '',
     languages: '',
     technologies: ''
   },

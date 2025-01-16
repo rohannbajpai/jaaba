@@ -10,6 +10,23 @@ export interface EditableBlockData {
   location: string
   duration: string
   latexCode?: string
+  // Header-specific fields
+  phone?: string
+  email?: string
+  github?: string
+  linkedin?: string
+  // Education-specific fields
+  degree?: string
+  gpa?: string
+  relevantCourses?: string
+  activities?: string
+  // Skills-specific fields
+  languages?: string
+  technologies?: string
+  // Experience/Project-specific fields
+  projectBullets?: string[]
+  role?: string
+  other?: string
 }
 
 interface EditableBlockProps {

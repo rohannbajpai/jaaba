@@ -1,16 +1,16 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
-import { Providers } from "./providers"
+import Providers from "./providers"
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Drag & Drop LaTeX Resume Editor',
-  description: 'A minimal DnD + LaTeX editor in Next.js',
+  title: 'LaTeX Resume Builder',
+  description: 'Build your LaTeX resume with a drag-and-drop interface',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
@@ -18,9 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

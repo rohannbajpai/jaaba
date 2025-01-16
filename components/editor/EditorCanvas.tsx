@@ -2,6 +2,7 @@
 
 import { useDrop } from "react-dnd"
 import { EditableBlock, EditableBlockData } from "./EditableBlock"
+import type { Ref } from 'react'
 
 interface EditorCanvasProps {
   blocks: EditableBlockData[]
@@ -10,9 +11,9 @@ interface EditorCanvasProps {
 }
 
 export function EditorCanvas({ blocks, onDropBlock, onBlockUpdate }: EditorCanvasProps) {
-  const [{ isOver }, drop] = useDrop(() => ({
+  const [{ isOver }, dropRef] = useDrop<EditableBlockData, void, { isOver: boolean }>(() => ({
     accept: 'BLOCK',
-    drop: (item: EditableBlockData) => {
+    drop: (item) => {
       onDropBlock(item)
     },
     collect: (monitor) => ({
@@ -22,7 +23,7 @@ export function EditorCanvas({ blocks, onDropBlock, onBlockUpdate }: EditorCanva
 
   return (
     <div
-      ref={drop}
+      ref={dropRef as unknown as Ref<HTMLDivElement>}
       className={`min-h-[400px] p-4 border-2 border-dashed rounded-lg ${
         isOver ? 'border-primary bg-primary/5' : 'border-gray-200'
       }`}
