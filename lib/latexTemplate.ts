@@ -2,8 +2,6 @@
 // latexTemplate.ts
 // ----------------------------
 
-import { BlockList } from "net";
-
 /**
  * The "Block" interface for each résumé section.
  * Must match the shape from EditableBlockData,
