@@ -12,11 +12,11 @@ export interface Block {
   sectionName: string;
 
   /* Common fields */
-  title: string;
   location?: string;
   duration?: string;
 
   /* Header-specific */
+  fullName?: string;
   phone?: string;
   email?: string;
   github?: string;
@@ -32,11 +32,11 @@ export interface Block {
   other?: string;
 
   /* Experience-specific */
-  bullets?: string[]; // bullet points
-  role?: string; // e.g., "Software Engineer Intern"
+  bullets?: string[];
+  role?: string;
 
   /* Projects-specific */
-  projectName?: string; // e.g., "Portfolio Website"
+  projectName?: string;
   technologies?: string;
   projectBullets?: string[];
 }
@@ -138,24 +138,27 @@ export interface Block {
   export function wrapJakeTemplate(blocks: Block[]): string {
     let doc = defaultLatexPreamble
   
+    // Filter out invalid blocks first
+    const validBlocks = blocks.filter(b => b && b.sectionName);
+  
     // 1) Handle the "Header" block (if any):
-    const header = blocks.find((b) => b.sectionName.toLowerCase() === "header")
+    const header = validBlocks.find((b) => b.sectionName.toLowerCase() === "header")
     if (header) {
       doc += `
-  \\begin{center}
-    \\textbf{\\Huge \\scshape ${escapeLatex(header.title)}} \\\\ \\vspace{1pt}
-    \\small ${escapeLatex(header.phone)} $|$ 
-    \\href{mailto:${escapeLatex(header.email)}}{\\underline{${escapeLatex(header.email)}}} $|$
-    \\href{${escapeLatex(header.linkedin)}}{\\underline{${escapeLatex(header.linkedin)}}} $|$
-    \\href{${escapeLatex(header.github)}}{\\underline{${escapeLatex(header.github)}}}
-  \\end{center}
-  
-  `
+\\begin{center}
+  \\textbf{\\Huge \\scshape ${escapeLatex(header.fullName)}} \\\\ \\vspace{1pt}
+  \\small ${escapeLatex(header.phone)} $|$ 
+  \\href{mailto:${escapeLatex(header.email)}}{\\underline{${escapeLatex(header.email)}}} $|$
+  \\href{${escapeLatex(header.linkedin)}}{\\underline{${escapeLatex(header.linkedin)}}} $|$
+  \\href{${escapeLatex(header.github)}}{\\underline{${escapeLatex(header.github)}}}
+\\end{center}
+
+`
     }
   
     // 2) Group the rest by sectionName (excluding header).
     const groups = new Map<string, Block[]>()
-    blocks
+    validBlocks
       .filter((b) => b.sectionName.toLowerCase() !== "header")
       .forEach((blk) => {
         const key = blk.sectionName

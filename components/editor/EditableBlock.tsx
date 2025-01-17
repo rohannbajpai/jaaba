@@ -15,34 +15,36 @@ export interface EditableBlockData {
   _id?: string;  // MongoDB ID
   id: string;    // Client-side ID
   sectionName: string;
-  title: string;
-  location?: string;
-  duration?: string;
   order?: number;
 
-  // Header-specific fields
+  // Header-specific
+  fullName?: string;      // Changed from title
   phone?: string;
   email?: string;
   github?: string;
   linkedin?: string;
 
-  // Education-specific fields
+  // Education-specific
+  institutionName?: string;  // Changed from title
+  location?: string;
+  duration?: string;
   degree?: string;
   relevantCourses?: string;
   activities?: string;
 
-  // Skills-specific fields
-  languages?: string;
-  other?: string;
-
-  // Experience-specific fields
-  bullets?: string[];
+  // Experience-specific
+  companyName?: string;    // Changed from title
   role?: string;
+  bullets?: string[];
 
-  // Projects-specific fields
-  projectName?: string;
+  // Projects-specific
+  projectName?: string;    // Changed from title
   technologies?: string;
   projectBullets?: string[];
+
+  // Skills-specific
+  languages?: string;
+  other?: string;
 }
 
 interface EditableBlockProps {
@@ -59,6 +61,11 @@ export function EditableBlock({
   moveBlock,
 }: EditableBlockProps) {
   const ref = useRef<HTMLDivElement>(null);
+
+  // Add early return if block is undefined
+  if (!block || !block.sectionName) {
+    return null;
+  }
 
   // Setup drag
   const [{ isDragging }, drag] = useDrag({
@@ -169,9 +176,9 @@ export function EditableBlock({
               <div className="text-sm font-medium">Full Name</div>
               <Input
                 placeholder="e.g., John Doe"
-                value={block.title || ""}
+                value={block.fullName || ""}
                 onChange={(e) =>
-                  handleFieldChange("title", e.target.value)
+                  handleFieldChange("fullName", e.target.value)
                 }
               />
             </div>
@@ -235,9 +242,9 @@ export function EditableBlock({
               <div className="text-sm font-medium">Institution Name</div>
               <Input
                 placeholder="e.g., University of Maryland"
-                value={block.title || ""}
+                value={block.institutionName || ""}
                 onChange={(e) =>
-                  handleFieldChange("title", e.target.value)
+                  handleFieldChange("institutionName", e.target.value)
                 }
               />
             </div>
@@ -345,9 +352,9 @@ export function EditableBlock({
               <div className="text-sm font-medium">Company/Organization</div>
               <Input
                 placeholder="e.g., Amazon Web Services"
-                value={block.title || ""}
+                value={block.companyName || ""}
                 onChange={(e) =>
-                  handleFieldChange("title", e.target.value)
+                  handleFieldChange("companyName", e.target.value)
                 }
               />
             </div>

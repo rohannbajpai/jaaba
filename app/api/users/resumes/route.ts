@@ -37,36 +37,38 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, blockIds } = await request.json();
-    if (!name || !Array.isArray(blockIds)) {
-      return NextResponse.json({ error: 'Invalid resume data' }, { status: 400 });
-    }
+    const { name } = await request.json();
 
     await dbConnect();
 
-    let user = await User.findOne({ email: session.user.email });
-    if (!user) {
-      user = new User({
-        email: session.user.email,
-        blocks: [],
-        resumes: [],
-      });
-    }
-
-    const resume = {
+    // Create a new resume with initial empty blocks
+    const newResume = {
       name,
-      blockIds: blockIds,
+      blockIds: [],
     };
 
-    user.resumes.push(resume);
-    await user.save();
+    const result = await User.findOneAndUpdate(
+      { email: session.user.email },
+      { 
+        $push: { 
+          resumes: newResume
+        }
+      },
+      { 
+        new: true,
+        runValidators: true
+      }
+    );
 
-    const savedResume = user.resumes[user.resumes.length - 1];
+    if (!result) {
+      return NextResponse.json({ error: 'Failed to create resume' }, { status: 500 });
+    }
+
+    const savedResume = result.resumes[result.resumes.length - 1];
 
     return NextResponse.json({ 
       success: true, 

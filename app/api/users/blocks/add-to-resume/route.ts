@@ -16,10 +16,46 @@ export async function POST(request: Request) {
 
     await dbConnect();
 
-    // Create new block with MongoDB ID
+    // Create new block with MongoDB ID and all fields
     const newBlock = {
-      ...block,
-      _id: new mongoose.Types.ObjectId()
+      _id: new mongoose.Types.ObjectId(),
+      id: block.id,
+      sectionName: block.sectionName,
+      order: block.order || 0,
+      // Add section-specific fields based on sectionName
+      ...(block.sectionName.toLowerCase() === 'header' && {
+        fullName: block.fullName,
+        phone: block.phone,
+        email: block.email,
+        github: block.github,
+        linkedin: block.linkedin
+      }),
+      ...(block.sectionName.toLowerCase() === 'education' && {
+        institutionName: block.institutionName,
+        location: block.location,
+        duration: block.duration,
+        degree: block.degree,
+        relevantCourses: block.relevantCourses,
+        activities: block.activities
+      }),
+      ...(block.sectionName.toLowerCase() === 'experience' && {
+        companyName: block.companyName,
+        location: block.location,
+        duration: block.duration,
+        role: block.role,
+        bullets: block.bullets || []
+      }),
+      ...(block.sectionName.toLowerCase() === 'projects' && {
+        projectName: block.projectName,
+        technologies: block.technologies,
+        duration: block.duration,
+        location: block.location,
+        projectBullets: block.projectBullets || []
+      }),
+      ...(block.sectionName.toLowerCase() === 'technical skills' && {
+        languages: block.languages,
+        other: block.other
+      })
     };
 
     // Add block and update resume in one operation

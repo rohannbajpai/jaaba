@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ResumeSelector } from "@/components/resume/ResumeSelector";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { debounce } from "lodash";
 
 // Add type for resume data
 interface ResumeData {
@@ -27,23 +28,12 @@ const libraryBlocks: EditableBlockData[] = [
   {
     id: `header-template-${uuidv4()}`,
     sectionName: "Header",
-    title: "",
+    fullName: "",
     phone: "",
     email: "",
     github: "",
     linkedin: "",
-    location: "",
-    duration: "",
-    degree: undefined,
-    relevantCourses: undefined,
-    activities: undefined,
-    languages: undefined,
-    other: undefined,
-    bullets: undefined,
-    role: undefined,
-    projectName: undefined,
-    technologies: undefined,
-    projectBullets: undefined,
+    order: 0,
   },
   
   // ------------------------------
@@ -232,16 +222,17 @@ export default function BuilderClient() {
 
   // Handler to add new blocks from the library
   const handleDropBlock = useCallback((block: EditableBlockData) => {
-    if (!currentResumeId) {
-      console.error('No resume selected');
+    if (!currentResumeId || !block.sectionName) {
+      console.error('No resume selected or invalid block');
       return;
     }
 
-    // Create the new block once
+    // Create a deep copy of the block template
     const newBlock = {
-      ...block,
+      ...JSON.parse(JSON.stringify(block)), // Deep copy
       id: `${block.sectionName.toLowerCase()}-${uuidv4()}`.replace('-template', ''),
-      order: canvasBlocks.length // Add order here
+      order: canvasBlocks.length,
+      sectionName: block.sectionName // Ensure sectionName is preserved
     };
 
     // Update UI optimistically
@@ -285,22 +276,56 @@ export default function BuilderClient() {
 
   }, [currentResumeId, canvasBlocks.length]);
 
+  // Create debounced save function
+  const debouncedSaveBlock = useCallback(
+    debounce(async (blockId: string, updates: Partial<EditableBlockData>) => {
+      if (!currentResumeId) return;
+
+      try {
+        const response = await fetch(`/api/users/blocks/${blockId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ updates }),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to save block updates');
+        }
+      } catch (error) {
+        console.error('Error saving block updates:', error);
+      }
+    }, 1000), // 1 second delay
+    [currentResumeId]
+  );
+
   // Handler to update existing blocks
   const handleBlockUpdate = useCallback((id: string, updated: Partial<EditableBlockData>) => {
     setCanvasBlocks(prevBlocks => {
       const updatedBlocks = prevBlocks.map((block) => {
         if (block.id === id) {
-          const updatedBlock = { ...block, ...updated };
-          return {
-            ...updatedBlock,
-            latexCode: generateLatexForBlock(updatedBlock)
+          // Ensure we maintain required fields when updating
+          const updatedBlock = {
+            ...block,
+            ...updated,
+            sectionName: updated.sectionName || block.sectionName, // Preserve sectionName
+            id: block.id, // Preserve ID
+            order: block.order // Preserve order
           };
+          
+          // Trigger debounced save if we have a valid block
+          if (updatedBlock.sectionName) {
+            debouncedSaveBlock(block._id || block.id, updatedBlock);
+          }
+          
+          return updatedBlock;
         }
         return block;
       });
       return updatedBlocks;
     });
-  }, [generateLatexForBlock]);
+  }, [debouncedSaveBlock]);
 
   // Handler to delete blocks
   const handleDeleteBlock = useCallback((id: string) => {
