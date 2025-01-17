@@ -3,53 +3,65 @@ import { DraggableBlock } from './DraggableBlock';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EditableBlockData } from './EditableBlock';
 
-const sectionTemplates: EditableBlockData[] = [
+export const sectionTemplates: EditableBlockData[] = [
+  // Header Template
   {
     id: 'template-header',
     sectionName: 'Header',
-    title: '',
-    location: '',
-    duration: '',
+    fullName: '',
     phone: '',
     email: '',
     github: '',
-    linkedin: ''
+    linkedin: '',
+    order: 0,
   },
+
+  // Education Template
   {
     id: 'template-education',
     sectionName: 'Education',
-    title: '',
+    institutionName: '',
     location: '',
     duration: '',
     degree: '',
-    //gpa: '', #TODO: readd
     relevantCourses: '',
-    activities: ''
+    activities: '',
+    order: 0,
   },
-  {
-    id: 'template-skills',
-    sectionName: 'Technical Skills',
-    title: 'Technical Skills',
-    location: '',
-    duration: '',
-    languages: '',
-    technologies: ''
-  },
+
+  // Experience Template
   {
     id: 'template-experience',
     sectionName: 'Experience',
-    title: '',
+    companyName: '',
+    role: '',
     location: '',
     duration: '',
-    projectBullets: []
+    bullets: [],
+    order: 0,
   },
+
+  // Projects Template
   {
     id: 'template-projects',
     sectionName: 'Projects',
-    title: '',
+    projectName: '',
+    technologies: '',
+    duration: '',
+    projectBullets: [],
+    location: '',
+    order: 0,
+  },
+
+  // Technical Skills Template
+  {
+    id: 'template-skills',
+    sectionName: 'Technical Skills',
+    languages: '',
+    other: '',
     location: '',
     duration: '',
-    projectBullets: []
+    order: 0,
   }
 ];
 

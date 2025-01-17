@@ -42,10 +42,9 @@ const libraryBlocks: EditableBlockData[] = [
   {
     id: `education-template-${uuidv4()}`,
     sectionName: "Education",
-    title: "",
+    degree: "",
     location: "",
     duration: "",
-    degree: "",
     relevantCourses: "",
     activities: "",
     phone: undefined,
@@ -67,10 +66,9 @@ const libraryBlocks: EditableBlockData[] = [
   {
     id: `experience-template-${uuidv4()}`,
     sectionName: "Experience",
-    title: "",
+    role: "",
     location: "",
     duration: "",
-    role: "",
     bullets: [],
     phone: undefined,
     email: undefined,
@@ -92,7 +90,7 @@ const libraryBlocks: EditableBlockData[] = [
   {
     id: `projects-template-${uuidv4()}`,
     sectionName: "Projects",
-    title: "",
+    projectName: "",
     technologies: "",
     duration: "",
     projectBullets: [],
@@ -108,7 +106,6 @@ const libraryBlocks: EditableBlockData[] = [
     other: undefined,
     bullets: undefined,
     role: undefined,
-    projectName: undefined,
   },
   
   // ------------------------------
@@ -119,7 +116,6 @@ const libraryBlocks: EditableBlockData[] = [
     sectionName: "Technical Skills",
     languages: "",
     other: "",
-    title: "",
     location: "",
     duration: "",
     phone: undefined,
@@ -184,11 +180,7 @@ export default function BuilderClient() {
             }
 
             const blocksData = await blocksResponse.json();
-            console.log('Initial resume load:', {
-              resumeName: defaultResume.name,
-              blockCount: blocksData.blocks?.length || 0,
-              blocks: blocksData.blocks
-            });
+            console.log('Loaded blocks:', blocksData.blocks);
 
             // Update all states after successful load
             setCurrentResumeId(defaultResume._id);
@@ -203,22 +195,6 @@ export default function BuilderClient() {
 
     loadInitialData();
   }, [isClient]);
-
-  // Function to generate LaTeX code for each block
-  const generateLatexForBlock = useCallback((block: EditableBlockData) => {
-    switch (block.sectionName) {
-      case 'Header':
-        return block.title ? `\\header{${block.title}}{${block.location || ''}}` : '';
-      case 'Education':
-      case 'Experience':
-      case 'Projects':
-      case 'Technical Skills':
-        return block.title ?
-          `\\resumeSubheading{${block.title}}{${block.location || ''}}{${block.duration || ''}}` : '';
-      default:
-        return '';
-    }
-  }, []);
 
   // Handler to add new blocks from the library
   const handleDropBlock = useCallback((block: EditableBlockData) => {
@@ -261,6 +237,7 @@ export default function BuilderClient() {
         }
 
         const { block: savedBlock } = await response.json();
+        console.log('Saved new block:', savedBlock);
         
         // Update the block in canvas with the saved version (contains _id)
         setCanvasBlocks(prevBlocks => 
@@ -278,11 +255,13 @@ export default function BuilderClient() {
 
   // Create debounced save function
   const debouncedSaveBlock = useCallback(
-    debounce(async (blockId: string, updates: Partial<EditableBlockData>) => {
+    debounce(async (_id: string, updates: Partial<EditableBlockData>) => {
       if (!currentResumeId) return;
 
+      console.log('Attempting to save block:', { _id, updates });
+
       try {
-        const response = await fetch(`/api/users/blocks/${blockId}`, {
+        const response = await fetch(`/api/users/blocks/${_id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -291,33 +270,44 @@ export default function BuilderClient() {
         });
 
         if (!response.ok) {
-          console.error('Failed to save block updates');
+          const data = await response.json();
+          console.error('Failed to save block updates:', { 
+            status: response.status,
+            data,
+            _id,
+            updates 
+          });
         }
       } catch (error) {
         console.error('Error saving block updates:', error);
       }
-    }, 1000), // 1 second delay
+    }, 1000),
     [currentResumeId]
   );
 
   // Handler to update existing blocks
   const handleBlockUpdate = useCallback((id: string, updated: Partial<EditableBlockData>) => {
     setCanvasBlocks(prevBlocks => {
+      const blockToUpdate = prevBlocks.find(b => b.id === id);
+      console.log('Block to update:', blockToUpdate);
+
+      if (!blockToUpdate?._id) {
+        console.error('No _id found for block:', { id, blockToUpdate });
+        return prevBlocks;
+      }
+
       const updatedBlocks = prevBlocks.map((block) => {
         if (block.id === id) {
-          // Ensure we maintain required fields when updating
           const updatedBlock = {
             ...block,
             ...updated,
-            sectionName: updated.sectionName || block.sectionName, // Preserve sectionName
-            id: block.id, // Preserve ID
-            order: block.order // Preserve order
+            sectionName: updated.sectionName || block.sectionName,
+            id: block.id,
+            order: block.order
           };
           
-          // Trigger debounced save if we have a valid block
-          if (updatedBlock.sectionName) {
-            debouncedSaveBlock(block._id || block.id, updatedBlock);
-          }
+          console.log('Saving block with _id:', blockToUpdate._id);
+          debouncedSaveBlock(blockToUpdate._id as string, updatedBlock);
           
           return updatedBlock;
         }
@@ -413,26 +403,24 @@ export default function BuilderClient() {
   // Function to generate the complete LaTeX document
   const generateLatexDocument = useCallback(() => {
     const formattedBlocks = canvasBlocks.map(block => {
-      // Clone the block to avoid mutating the original state
       const formattedBlock = { ...block };
       
-      // Only modify fields as necessary
-      if (block.sectionName === 'Header') {
-        // Header already contains all necessary fields
-        // No additional modifications required
-      } else if (block.sectionName === 'Education') {
-        // No changes needed; fields are correctly set
-      } else if (block.sectionName === 'Experience') {
-        // Ensure bullets are present; default to empty array if undefined
-        formattedBlock.bullets = block.bullets || [];
-      } else if (block.sectionName === 'Projects') {
-        // Ensure projectBullets are present; default to empty array if undefined
-        formattedBlock.projectBullets = block.projectBullets || [];
-      } else if (block.sectionName === 'Technical Skills') {
-        // No changes needed; fields are correctly set
+      switch (block.sectionName?.toLowerCase()) {
+        case 'header':
+          return formattedBlock;
+        case 'education':
+          return formattedBlock;
+        case 'experience':
+          formattedBlock.bullets = block.bullets || [];
+          return formattedBlock;
+        case 'projects':
+          formattedBlock.projectBullets = block.projectBullets || [];
+          return formattedBlock;
+        case 'technical skills':
+          return formattedBlock;
+        default:
+          return formattedBlock;
       }
-    
-      return formattedBlock;
     });
     
     return wrapJakeTemplate(formattedBlocks);

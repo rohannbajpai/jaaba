@@ -5,69 +5,104 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { authOptions } from '@/lib/auth';
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { blockId: string } }
-) {
+export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { updates } = await request.json();
-    const blockId = await params.blockId;
+    // Extract blockId from URL segments
+    const segments = request.nextUrl.pathname.split('/');
+    const blockId = segments[segments.length - 1];
 
+    console.log('Received PATCH request:', { 
+      blockId,
+      pathname: request.nextUrl.pathname,
+      segments 
+    });
+
+    if (!blockId) {
+      return NextResponse.json({ 
+        error: 'Block ID is required',
+        details: { pathname: request.nextUrl.pathname } 
+      }, { status: 400 });
+    }
+
+    // Validate blockId format
+    if (!mongoose.Types.ObjectId.isValid(blockId)) {
+      return NextResponse.json({ 
+        error: 'Invalid block ID format',
+        details: { blockId, isValid: mongoose.Types.ObjectId.isValid(blockId) }
+      }, { status: 400 });
+    }
+
+    const { updates } = await request.json();
     await dbConnect();
 
-    // Fix: Preserve existing block data and only update changed fields
+    // Use the validated blockId
+    const objectId = new mongoose.Types.ObjectId(blockId);
+
+    // Create base update object with common fields
+    const baseUpdate = {
+      id: updates.id,
+      sectionName: updates.sectionName,
+      order: updates.order ?? 0,
+      location: updates.location,
+      duration: updates.duration,
+    };
+
+    // Add section-specific fields
+    const sectionSpecificFields = (() => {
+      switch (updates.sectionName?.toLowerCase()) {
+        case 'header':
+          return {
+            fullName: updates.fullName,
+            phone: updates.phone,
+            email: updates.email,
+            github: updates.github,
+            linkedin: updates.linkedin,
+          };
+        case 'education':
+          return {
+            institutionName: updates.institutionName,
+            degree: updates.degree,
+            relevantCourses: updates.relevantCourses,
+            activities: updates.activities,
+          };
+        case 'experience':
+          return {
+            companyName: updates.companyName,
+            role: updates.role,
+            bullets: updates.bullets || [],
+          };
+        case 'projects':
+          return {
+            projectName: updates.projectName,
+            technologies: updates.technologies,
+            projectBullets: updates.projectBullets || [],
+          };
+        case 'technical skills':
+          return {
+            languages: updates.languages,
+            other: updates.other,
+          };
+        default:
+          return {};
+      }
+    })();
+
     const result = await User.findOneAndUpdate(
       {
         email: session.user.email,
-        'blocks._id': new mongoose.Types.ObjectId(blockId)
+        'blocks._id': objectId
       },
       {
         $set: {
           'blocks.$': {
-            ...updates,
-            _id: new mongoose.Types.ObjectId(blockId),
-            id: updates.id,
-            sectionName: updates.sectionName || updates.sectionName,
-            order: updates.order || 0,
-            // Add section-specific fields based on sectionName
-            ...(updates.sectionName?.toLowerCase() === 'header' && {
-              fullName: updates.fullName,
-              phone: updates.phone,
-              email: updates.email,
-              github: updates.github,
-              linkedin: updates.linkedin
-            }),
-            ...(updates.sectionName?.toLowerCase() === 'education' && {
-              institutionName: updates.institutionName,
-              location: updates.location,
-              duration: updates.duration,
-              degree: updates.degree,
-              relevantCourses: updates.relevantCourses,
-              activities: updates.activities
-            }),
-            ...(updates.sectionName?.toLowerCase() === 'experience' && {
-              companyName: updates.companyName,
-              location: updates.location,
-              duration: updates.duration,
-              role: updates.role,
-              bullets: updates.bullets || []
-            }),
-            ...(updates.sectionName?.toLowerCase() === 'projects' && {
-              projectName: updates.projectName,
-              technologies: updates.technologies,
-              duration: updates.duration,
-              location: updates.location,
-              projectBullets: updates.projectBullets || []
-            }),
-            ...(updates.sectionName?.toLowerCase() === 'technical skills' && {
-              languages: updates.languages,
-              other: updates.other
-            })
+            _id: objectId,
+            ...baseUpdate,
+            ...sectionSpecificFields,
           }
         }
       },
@@ -78,7 +113,6 @@ export async function PATCH(
       return NextResponse.json({ error: 'Block not found' }, { status: 404 });
     }
 
-    // Find the updated block
     const updatedBlock = result.blocks.find(
       (block: { _id: mongoose.Types.ObjectId }) => block._id.toString() === blockId
     );
@@ -86,6 +120,12 @@ export async function PATCH(
     return NextResponse.json({ block: updatedBlock });
   } catch (error) {
     console.error('Error in PATCH /api/users/blocks/[blockId]:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { 
+        error: 'Internal Server Error',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    );
   }
 } 

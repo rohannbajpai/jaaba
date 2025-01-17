@@ -14,9 +14,9 @@ interface Resume {
 
 export async function GET(request: NextRequest) {
   try {
-    const { pathname } = request.nextUrl;
-    const segments = pathname.split('/');
-    const resumeId = segments[4];
+    // Extract resumeId from URL segments
+    const segments = request.nextUrl.pathname.split('/');
+    const resumeId = segments[segments.length - 2]; // Get the second-to-last segment
 
     if (!resumeId) {
       return NextResponse.json({ error: 'Resume ID is required' }, { status: 400 });
@@ -50,20 +50,24 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { resumeId: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, blockIds } = await request.json();
-    const resumeId = params.resumeId;
+    // Extract resumeId from URL segments
+    const segments = request.nextUrl.pathname.split('/');
+    const resumeId = segments[segments.length - 2]; // Get the second-to-last segment
 
-    if (!resumeId || !name || !Array.isArray(blockIds)) {
+    if (!resumeId) {
+      return NextResponse.json({ error: 'Resume ID is required' }, { status: 400 });
+    }
+
+    const { name, blockIds } = await request.json();
+
+    if (!name || !Array.isArray(blockIds)) {
       return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
     }
 
@@ -92,7 +96,7 @@ export async function PUT(
 
     // Find the updated resume
     const updatedResume = result.resumes.find(
-      resume => resume._id.toString() === resumeId
+      (resume: Resume) => resume._id.toString() === resumeId
     );
 
     return NextResponse.json({ resume: updatedResume });
