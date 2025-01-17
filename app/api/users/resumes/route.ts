@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { authOptions } from "@/lib/auth";
@@ -37,20 +38,39 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+    
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { name } = await request.json();
 
+    if (!name) {
+      return NextResponse.json({ error: 'Resume name is required' }, { status: 400 });
+    }
+
     await dbConnect();
 
-    // Create a new resume with initial empty blocks
+    // First, ensure the user exists or create them
+    let user = await User.findOne({ email: session.user.email });
+    
+    if (!user) {
+      // Create new user if they don't exist
+      user = await User.create({
+        email: session.user.email,
+        blocks: [],
+        resumes: []
+      });
+    }
+
+    // Create new resume with MongoDB ID
     const newResume = {
+      _id: new mongoose.Types.ObjectId(),
       name,
-      blockIds: [],
+      blockIds: [] // Start with empty blocks array
     };
 
+    // Add resume to user's resumes array
     const result = await User.findOneAndUpdate(
       { email: session.user.email },
       { 
@@ -65,9 +85,16 @@ export async function POST(request: Request) {
     );
 
     if (!result) {
-      return NextResponse.json({ error: 'Failed to create resume' }, { status: 500 });
+      return NextResponse.json(
+        { 
+          error: 'Failed to create resume',
+          details: 'User not found or database error'
+        }, 
+        { status: 500 }
+      );
     }
 
+    // Get the newly created resume
     const savedResume = result.resumes[result.resumes.length - 1];
 
     return NextResponse.json({ 
@@ -76,6 +103,12 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Error in POST /api/users/resumes:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { 
+        error: 'Internal Server Error',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    );
   }
 } 

@@ -482,48 +482,55 @@ export default function BuilderClient() {
     } catch (error) {
       console.error('Error switching resume:', error);
     }
-  }, [resumes]); // Add resumes to dependencies
+  }, [resumes]);
 
-  const handleCreateNewResume = useCallback(async () => {
-    if (!newResumeName.trim()) return;
-
+  // Handler for creating new resume (used by both first resume and subsequent resumes)
+  const handleCreateNewResume = useCallback(async (name: string) => {
     try {
+      console.log('Received name in handleCreateNewResume:', name);
+      if (typeof name !== 'string' || !name.trim()) {
+        throw new Error('Resume name is required');
+      }
+
       const response = await fetch('/api/users/resumes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: newResumeName,
-          blockIds: [],
-        }),
+        body: JSON.stringify({ name: name.trim() })
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        console.error('Failed to create new resume');
-        return;
+        console.error('Failed to create new resume:', data);
+        throw new Error(data.error || 'Failed to create new resume');
       }
 
-      const data = await response.json();
+      if (!data.resume?._id) {
+        throw new Error('Invalid response from server');
+      }
+
+      // Update resumes list
+      setResumes(prev => [...prev, { 
+        id: data.resume._id, 
+        name: data.resume.name 
+      }]);
       
-      // Update resumes list first
-      const newResume = { id: data.resume._id, name: data.resume.name };
-      setResumes(prev => [...prev, newResume]);
-      
-      // Clear canvas and update current resume
-      setCanvasBlocks([]);
+      // Set as current resume
       setCurrentResumeId(data.resume._id);
       setCurrentResumeName(data.resume.name);
+      setCanvasBlocks([]); // Clear canvas for new resume
 
-      // Reset UI state
+      // Close the dialog if it's open
       setIsNewResumeDialogOpen(false);
       setNewResumeName("");
 
-      // No need to call handleResumeChange here since we've already set up the state
     } catch (error) {
       console.error('Error creating new resume:', error);
+      throw error;
     }
-  }, [newResumeName]);
+  }, []);
 
   return (
     <main className="flex flex-col md:flex-row gap-4 p-4">
@@ -546,7 +553,7 @@ export default function BuilderClient() {
             currentResume={currentResumeId}
             resumes={resumes}
             onResumeChange={handleResumeChange}
-            onNewResume={() => setIsNewResumeDialogOpen(true)}
+            onCreateResume={handleCreateNewResume}
           />
         </div>
         {resumes.length === 0 ? (
@@ -592,15 +599,12 @@ export default function BuilderClient() {
             <DialogTitle>Create New Resume</DialogTitle>
           </DialogHeader>
           <Input
-            placeholder="Resume Name"
+            placeholder="Resume name"
             value={newResumeName}
             onChange={(e) => setNewResumeName(e.target.value)}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewResumeDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateNewResume}>
+            <Button onClick={() => handleCreateNewResume(newResumeName)}>
               Create
             </Button>
           </DialogFooter>
