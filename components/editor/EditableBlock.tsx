@@ -12,37 +12,41 @@ import { Card, CardContent } from "@/components/ui/card";
 
 /** Data interface for each résumé block. */
 export interface EditableBlockData {
+  _id?: string;
   id: string;
   sectionName: string;
-
-  /* Common fields */
-  title: string;
-  location?: string;
-  duration?: string;
-
-  /* Header-specific */
+  order?: number;
+  
+  // Header specific fields
+  fullName?: string;
   phone?: string;
   email?: string;
   github?: string;
   linkedin?: string;
 
-  /* Education-specific */
+  // Education specific fields
+  institutionName?: string;
   degree?: string;
   relevantCourses?: string;
   activities?: string;
 
-  /* Skills-specific */
-  languages?: string;
-  other?: string;
+  // Experience specific fields
+  companyName?: string;
+  role?: string;
+  bullets?: string[];
 
-  /* Experience-specific */
-  bullets?: string[]; // bullet points
-  role?: string; // e.g., "Software Engineer Intern"
-
-  /* Projects-specific */
-  projectName?: string; // e.g., "Portfolio Website"
+  // Project specific fields
+  projectName?: string;
   technologies?: string;
   projectBullets?: string[];
+
+  // Common fields
+  location?: string;
+  duration?: string;
+
+  // Technical Skills specific fields
+  languages?: string;
+  other?: string;
 }
 
 interface EditableBlockProps {
@@ -63,7 +67,7 @@ export function EditableBlock({
   // Setup drag
   const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.BLOCK,
-    item: { id: block.id },
+    item: { id: block?.id },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -73,11 +77,11 @@ export function EditableBlock({
   const [, drop] = useDrop({
     accept: ItemTypes.BLOCK,
     hover(item: unknown, monitor: DropTargetMonitor) {
-      if (!ref.current) {
+      if (!ref.current || !block) {
         return;
       }
 
-      const draggedId: string = (item as {id: string}).id
+      const draggedId: string = (item as {id: string}).id;
       const hoveredId = block.id;
 
       if (draggedId === hoveredId) {
@@ -86,19 +90,13 @@ export function EditableBlock({
 
       // Determine rectangle on screen
       const hoverBoundingRect = ref.current.getBoundingClientRect();
-
-      // Get vertical middle
-      const hoverMiddleY =
-        (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-
-      // Determine mouse position
+      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
       const clientOffset = monitor.getClientOffset();
+      
       if (!clientOffset) return;
 
-      // Get pixels to the top
       const hoverClientY = clientOffset.y - hoverBoundingRect.top;
 
-      // Only perform the move when the mouse has crossed half of the item's height
       if (hoverClientY < hoverMiddleY) {
         moveBlock(draggedId, hoveredId);
       }
@@ -107,6 +105,11 @@ export function EditableBlock({
 
   // Connect drag and drop
   drag(drop(ref));
+
+  // Add early return after hooks
+  if (!block || !block.sectionName) {
+    return null;
+  }
 
   // Adjust opacity when dragging
   const opacity = isDragging ? 0.5 : 1;
@@ -169,9 +172,9 @@ export function EditableBlock({
               <div className="text-sm font-medium">Full Name</div>
               <Input
                 placeholder="e.g., John Doe"
-                value={block.title || ""}
+                value={block.fullName || ""}
                 onChange={(e) =>
-                  handleFieldChange("title", e.target.value)
+                  handleFieldChange("fullName", e.target.value)
                 }
               />
             </div>
@@ -235,9 +238,9 @@ export function EditableBlock({
               <div className="text-sm font-medium">Institution Name</div>
               <Input
                 placeholder="e.g., University of Maryland"
-                value={block.title || ""}
+                value={block.institutionName || ""}
                 onChange={(e) =>
-                  handleFieldChange("title", e.target.value)
+                  handleFieldChange("institutionName", e.target.value)
                 }
               />
             </div>
@@ -345,9 +348,9 @@ export function EditableBlock({
               <div className="text-sm font-medium">Company/Organization</div>
               <Input
                 placeholder="e.g., Amazon Web Services"
-                value={block.title || ""}
+                value={block.companyName || ""}
                 onChange={(e) =>
-                  handleFieldChange("title", e.target.value)
+                  handleFieldChange("companyName", e.target.value)
                 }
               />
             </div>
@@ -507,7 +510,7 @@ export function EditableBlock({
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2"
-            onClick={() => onDelete(block.id)}
+            onClick={() => onDelete(block._id || block.id)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

@@ -12,33 +12,35 @@ export interface Block {
   sectionName: string;
 
   /* Common fields */
-  title: string;
   location?: string;
   duration?: string;
 
   /* Header-specific */
+  fullName?: string;
   phone?: string;
   email?: string;
   github?: string;
   linkedin?: string;
 
   /* Education-specific */
+  institutionName?: string;
   degree?: string;
   relevantCourses?: string;
   activities?: string;
 
+  /* Experience-specific */
+  companyName?: string;
+  role?: string;
+  bullets?: string[];
+
+  /* Projects-specific */
+  projectName?: string;
+  technologies?: string;
+  projectBullets?: string[];
+
   /* Skills-specific */
   languages?: string;
   other?: string;
-
-  /* Experience-specific */
-  bullets?: string[]; // bullet points
-  role?: string; // e.g., "Software Engineer Intern"
-
-  /* Projects-specific */
-  projectName?: string; // e.g., "Portfolio Website"
-  technologies?: string;
-  projectBullets?: string[];
 }
   
   /**
@@ -138,24 +140,27 @@ export interface Block {
   export function wrapJakeTemplate(blocks: Block[]): string {
     let doc = defaultLatexPreamble
   
+    // Filter out invalid blocks first
+    const validBlocks = blocks.filter(b => b && b.sectionName);
+  
     // 1) Handle the "Header" block (if any):
-    const header = blocks.find((b) => b.sectionName.toLowerCase() === "header")
+    const header = validBlocks.find((b) => b.sectionName.toLowerCase() === "header")
     if (header) {
       doc += `
-  \\begin{center}
-    \\textbf{\\Huge \\scshape ${escapeLatex(header.title)}} \\\\ \\vspace{1pt}
-    \\small ${escapeLatex(header.phone)} $|$ 
-    \\href{mailto:${escapeLatex(header.email)}}{\\underline{${escapeLatex(header.email)}}} $|$
-    \\href{${escapeLatex(header.linkedin)}}{\\underline{${escapeLatex(header.linkedin)}}} $|$
-    \\href{${escapeLatex(header.github)}}{\\underline{${escapeLatex(header.github)}}}
-  \\end{center}
-  
-  `
+\\begin{center}
+  \\textbf{\\Huge \\scshape ${escapeLatex(header.fullName)}} \\\\ \\vspace{1pt}
+  \\small ${escapeLatex(header.phone)} $|$ 
+  \\href{mailto:${escapeLatex(header.email)}}{\\underline{${escapeLatex(header.email)}}} $|$
+  \\href{${escapeLatex(header.linkedin)}}{\\underline{${escapeLatex(header.linkedin)}}} $|$
+  \\href{${escapeLatex(header.github)}}{\\underline{${escapeLatex(header.github)}}}
+\\end{center}
+
+`
     }
   
     // 2) Group the rest by sectionName (excluding header).
     const groups = new Map<string, Block[]>()
-    blocks
+    validBlocks
       .filter((b) => b.sectionName.toLowerCase() !== "header")
       .forEach((blk) => {
         const key = blk.sectionName
@@ -177,7 +182,7 @@ export interface Block {
           case "education":
             doc += String.raw`
               \resumeSubheading
-              {${escapeLatex(block.title)}}{${escapeLatex(block.location)}}
+              {${escapeLatex(block.institutionName)}}{${escapeLatex(block.location)}}
               {${escapeLatex(block.degree)}}{${escapeLatex(block.duration)}}
               \begin{itemize}[leftmargin=0in, label={}]
                 \small{
@@ -202,20 +207,16 @@ export interface Block {
   
           // EXPERIENCE
           case "experience": {
-            // For experience, "title" = company name, "role" is optional, bullet array is "bullets"
-            const safeCompany = escapeLatex(block.title)
+            const safeCompany = escapeLatex(block.companyName)
             const safeLocation = escapeLatex(block.location)
             const safeDuration = escapeLatex(block.duration)
-            // We'll combine "role" if you want to display it on that second line:
-            // e.g. "Software Engineer Intern"
-            // Let's do {role} in the 3rd slot, {location} in the 4th
             const safeRole = escapeLatex(block.role || "")
             doc += String.raw`
-  \resumeSubheading
-  {${safeCompany}}{${safeDuration}}
-  {${safeRole}}{${safeLocation}}
-  \resumeItemListStart
-  `
+\resumeSubheading
+{${safeCompany}}{${safeDuration}}
+{${safeRole}}{${safeLocation}}
+\resumeItemListStart
+`
             if (block.bullets) {
               for (const bullet of block.bullets) {
                 doc += `  \\resumeItem{${escapeLatex(bullet)}}\n`
@@ -227,17 +228,15 @@ export interface Block {
   
           // PROJECTS
           case "projects": {
-            // For projects, we might store the name in projectName, bullet array in projectBullets
-            const safeProjectName = escapeLatex(block.projectName || block.title)
+            const safeProjectName = escapeLatex(block.projectName)
             const safeTechnologies = escapeLatex(block.technologies)
             const safeDuration = escapeLatex(block.duration)
-            // We might place the technologies in the third param, location in the 4th param if you want
             doc += String.raw`
-  \resumeSubheading
-  {${safeProjectName}}{${safeDuration}}
-  {${safeTechnologies}}{${escapeLatex(block.location)}}
-  \resumeItemListStart
-  `
+\resumeSubheading
+{${safeProjectName}}{${safeDuration}}
+{${safeTechnologies}}{${escapeLatex(block.location)}}
+\resumeItemListStart
+`
             if (block.projectBullets) {
               for (const bullet of block.projectBullets) {
                 doc += `  \\resumeItem{${escapeLatex(bullet)}}\n`
@@ -248,16 +247,16 @@ export interface Block {
           }
   
           default:
-            // Catch-all
+            // Catch-all - use companyName as generic title
             doc += String.raw`
-  \resumeSubheading
-  {${escapeLatex(block.title)}}{${escapeLatex(block.duration)}}
-  {}{${escapeLatex(block.location)}}
-  \resumeItemListStart
-    \resumeItem{(No special fields for this section.)}
-  \resumeItemListEnd
-  
-  `
+\resumeSubheading
+{${escapeLatex(block.companyName)}}{${escapeLatex(block.duration)}}
+{}{${escapeLatex(block.location)}}
+\resumeItemListStart
+  \resumeItem{(No special fields for this section.)}
+\resumeItemListEnd
+
+`
             break
         }
       }
