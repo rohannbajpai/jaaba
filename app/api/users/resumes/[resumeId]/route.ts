@@ -49,3 +49,55 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { resumeId: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { name, blockIds } = await request.json();
+    const resumeId = params.resumeId;
+
+    if (!resumeId || !name || !Array.isArray(blockIds)) {
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
+    }
+
+    await dbConnect();
+
+    // Update the specific resume in the user's resumes array
+    const result = await User.findOneAndUpdate(
+      { 
+        email: session.user.email,
+        'resumes._id': new mongoose.Types.ObjectId(resumeId)
+      },
+      { 
+        $set: {
+          'resumes.$.name': name,
+          'resumes.$.blockIds': blockIds.map(id => 
+            typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id
+          )
+        }
+      },
+      { new: true }
+    );
+
+    if (!result) {
+      return NextResponse.json({ error: 'Resume not found' }, { status: 404 });
+    }
+
+    // Find the updated resume
+    const updatedResume = result.resumes.find(
+      resume => resume._id.toString() === resumeId
+    );
+
+    return NextResponse.json({ resume: updatedResume });
+  } catch (error) {
+    console.error('Error in PUT /api/users/resumes/[resumeId]:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

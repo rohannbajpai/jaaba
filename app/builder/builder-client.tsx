@@ -309,8 +309,12 @@ export default function BuilderClient() {
       return;
     }
 
+    // Optimistically update UI
     setCanvasBlocks(prevBlocks => {
-      const updatedBlocks = prevBlocks.filter(block => block._id !== id);
+      const blockToDelete = prevBlocks.find(block => block._id === id || block.id === id);
+      if (!blockToDelete) return prevBlocks;
+
+      const updatedBlocks = prevBlocks.filter(block => block._id !== id && block.id !== id);
 
       // Delete from server
       (async () => {
@@ -321,15 +325,22 @@ export default function BuilderClient() {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ blockId: id }),
+            body: JSON.stringify({ 
+              blockId: blockToDelete._id || id 
+            }),
           });
 
           if (!deleteResponse.ok) {
             console.error('Failed to delete block');
+            setCanvasBlocks(prevBlocks);
             return;
           }
 
           // Then update the resume's blockIds array
+          const remainingBlockIds = updatedBlocks
+            .filter(block => block._id)
+            .map(block => block._id);
+
           const resumeResponse = await fetch(`/api/users/resumes/${currentResumeId}`, {
             method: 'PUT',
             headers: {
@@ -337,16 +348,18 @@ export default function BuilderClient() {
             },
             body: JSON.stringify({
               name: currentResumeName,
-              blockIds: updatedBlocks.map(block => block._id),
+              blockIds: remainingBlockIds
             }),
           });
 
           if (!resumeResponse.ok) {
             console.error('Failed to update resume');
+            setCanvasBlocks(prevBlocks);
             return;
           }
         } catch (error) {
           console.error('Error deleting block:', error);
+          setCanvasBlocks(prevBlocks);
         }
       })();
 
