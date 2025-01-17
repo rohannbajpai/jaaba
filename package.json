@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -22,10 +22,10 @@
     "lucide-react": "^0.471.1",
     "mongoose": "^8.9.5",
     "next-transpile-modules": "^10.0.1",
-    "react": "^19.0.0",
+    "react": "^18.2.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
-    "react-dom": "^19.0.0",
+    "react-dom": "^18.2.0",
     "react-markdown": "^9.0.3",
     "react-merge-refs": "^2.1.1",
     "remark-gfm": "^4.0.0",
@@ -36,8 +36,8 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^9",
