@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../api/auth/options'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import BuilderClient from './builder-client'
 import { Suspense } from 'react'
 import Loading from './loading'

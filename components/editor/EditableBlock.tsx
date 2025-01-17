@@ -507,7 +507,7 @@ export function EditableBlock({
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2"
-            onClick={() => onDelete(block.id)}
+            onClick={() => onDelete(block._id || block.id)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

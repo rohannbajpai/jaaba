@@ -23,7 +23,7 @@ export function EditorCanvas({
     accept: ItemTypes.BLOCK,
     drop: (item: EditableBlockData) => {
       // If the dropped block is not already in the canvas, add it
-      const existingBlock = blocks.find((block) => block.id === item.id);
+      const existingBlock = blocks.find((block) => block._id === item._id);
       if (!existingBlock) {
         onDropBlock(item);
       }
@@ -48,7 +48,7 @@ export function EditorCanvas({
         <div className="space-y-4">
           {blocks.map((block) => (
             <EditableBlock
-              key={block.id}
+              key={block._id || block.id}
               block={block}
               onUpdate={onBlockUpdate}
               moveBlock={moveBlock}
