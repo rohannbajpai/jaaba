@@ -59,10 +59,27 @@ export async function PUT(request: NextRequest) {
 
     // Extract resumeId from URL segments
     const segments = request.nextUrl.pathname.split('/');
-    const resumeId = segments[segments.length - 2]; // Get the second-to-last segment
+    const resumeId = segments[segments.length - 1];
+
+    console.log('Received PUT request:', { 
+      resumeId,
+      pathname: request.nextUrl.pathname,
+      segments 
+    });
 
     if (!resumeId) {
-      return NextResponse.json({ error: 'Resume ID is required' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Resume ID is required',
+        details: { pathname: request.nextUrl.pathname } 
+      }, { status: 400 });
+    }
+
+    // Validate resumeId format
+    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+      return NextResponse.json({ 
+        error: 'Invalid resume ID format',
+        details: { resumeId, isValid: mongoose.Types.ObjectId.isValid(resumeId) }
+      }, { status: 400 });
     }
 
     const { name, blockIds } = await request.json();
@@ -73,11 +90,14 @@ export async function PUT(request: NextRequest) {
 
     await dbConnect();
 
+    // Create ObjectId once and reuse it
+    const objectId = new mongoose.Types.ObjectId(resumeId);
+
     // Update the specific resume in the user's resumes array
     const result = await User.findOneAndUpdate(
       { 
         email: session.user.email,
-        'resumes._id': new mongoose.Types.ObjectId(resumeId)
+        'resumes._id': objectId
       },
       { 
         $set: {
@@ -102,6 +122,12 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ resume: updatedResume });
   } catch (error) {
     console.error('Error in PUT /api/users/resumes/[resumeId]:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { 
+        error: 'Internal Server Error',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    );
   }
 }
