@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/db';
-import User, { Resume } from '@/models/User';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { Types } from 'mongoose';
+import User from '@/models/User';
+import { authOptions } from "@/lib/auth";
 
 /**
  * GET /api/users/resumes
@@ -50,7 +49,6 @@ export async function POST(request: Request) {
 
     await dbConnect();
 
-    // Find or create user
     let user = await User.findOne({ email: session.user.email });
     if (!user) {
       user = new User({
@@ -60,28 +58,20 @@ export async function POST(request: Request) {
       });
     }
 
-    // Find the blocks in user's blocks array that match the blockIds
-    const validBlocks = user.blocks.filter(block => 
-      blockIds.some(id => id === block._id.toString())
-    );
-    const validBlockIds = validBlocks.map(block => block._id);
-
-    // Create or update resume with valid block IDs
-    const resumeIndex = user.resumes.findIndex(r => r.name === name);
     const resume = {
       name,
-      blockIds: validBlockIds,
+      blockIds: blockIds,
     };
 
-    if (resumeIndex === -1) {
-      user.resumes.push(resume);
-    } else {
-      user.resumes[resumeIndex] = resume;
-    }
-
+    user.resumes.push(resume);
     await user.save();
 
-    return NextResponse.json({ success: true, resume });
+    const savedResume = user.resumes[user.resumes.length - 1];
+
+    return NextResponse.json({ 
+      success: true, 
+      resume: savedResume 
+    });
   } catch (error) {
     console.error('Error in POST /api/users/resumes:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

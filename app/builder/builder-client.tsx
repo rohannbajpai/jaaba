@@ -1,15 +1,24 @@
 // pages/builder.tsx
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { DraggableBlock } from "@/components/editor/DraggableBlock";
 import { EditorCanvas } from "@/components/editor/EditorCanvas";
 import { MarkdownPreview } from "@/components/preview/MarkdownPreview";
 import { Button } from "@/components/ui/button";
 import { wrapJakeTemplate } from "@/lib/latexTemplate";
 import { EditableBlockData } from "@/components/editor/EditableBlock";
-import debounce from "lodash/debounce";
 import { v4 as uuidv4 } from 'uuid';
+import { ResumeSelector } from "@/components/resume/ResumeSelector";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+
+// Add type for resume data
+interface ResumeData {
+  _id: string;
+  name: string;
+  blockIds: string[];
+}
 
 const libraryBlocks: EditableBlockData[] = [
   // ------------------------------
@@ -138,138 +147,72 @@ const libraryBlocks: EditableBlockData[] = [
   },
 ];
 
-const CACHE_KEY = 'resume-builder-blocks';
-
 export default function BuilderClient() {
   // Initialize with empty array and update after mount
   const [canvasBlocks, setCanvasBlocks] = useState<EditableBlockData[]>([]);
-  const [currentResumeName, setCurrentResumeName] = useState<string>("Default Resume");
+  const [currentResumeName, setCurrentResumeName] = useState<string>("");
   const [isClient, setIsClient] = useState(false);
+  const [resumes, setResumes] = useState<Array<{ name: string; id: string }>>([]);
+  const [currentResumeId, setCurrentResumeId] = useState<string>("");
+  const [isNewResumeDialogOpen, setIsNewResumeDialogOpen] = useState(false);
+  const [newResumeName, setNewResumeName] = useState("");
 
-  // Set isClient to true after mount
+  // Load resumes and blocks on mount
   useEffect(() => {
-    setIsClient(true);
-    // Load from localStorage after component mounts
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      try {
-        const parsedBlocks = JSON.parse(cached);
-        setCanvasBlocks(parsedBlocks);
-      } catch (e) {
-        console.error('Failed to parse cached blocks');
-      }
+    if (!isClient) {
+      setIsClient(true);
+      return;
     }
-  }, []);
 
-  // Update localStorage whenever blocks change, but only after initial mount
-  useEffect(() => {
-    if (isClient && canvasBlocks.length > 0) {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(canvasBlocks));
-    }
-  }, [canvasBlocks, isClient]);
-
-  // Load blocks from the backend on mount
-  useEffect(() => {
-    if (!isClient) return; // Skip server-side execution
-
-    const loadBlocks = async () => {
+    const loadInitialData = async () => {
       try {
+        // First load all resumes
         const resumeResponse = await fetch('/api/users/resumes');
         if (!resumeResponse.ok) {
-          console.error('Failed to load resume');
+          console.error('Failed to load resumes');
           return;
         }
 
         const resumeData = await resumeResponse.json();
-        const currentResume = resumeData.resumes?.[0];
-        if (currentResume) {
-          setCurrentResumeName(currentResume.name);
+        if (resumeData.resumes?.length > 0) {
+          // Set resumes state
+          const formattedResumes = resumeData.resumes.map((resume: ResumeData) => ({
+            id: resume._id,
+            name: resume.name
+          }));
+          setResumes(formattedResumes);
 
-          const blocksResponse = await fetch('/api/users/blocks');
-          if (!blocksResponse.ok) {
-            console.error('Failed to load blocks');
-            return;
-          }
+          // Set current resume
+          const defaultResume = resumeData.resumes[0];
+          
+          // Load blocks for the default resume
+          if (defaultResume._id) {
+            const blocksResponse = await fetch(`/api/users/resumes/${defaultResume._id}/blocks`);
+            if (!blocksResponse.ok) {
+              console.error('Failed to load blocks for default resume');
+              return;
+            }
 
-          const blocksData = await blocksResponse.json();
-          if (blocksData.blocks?.length > 0) {
-            const resumeBlocks = blocksData.blocks
-              .filter((block: EditableBlockData) => 
-                currentResume.blockIds.some(
-                  (blockId: string) => blockId === block._id
-                )
-              )
-              .sort((a: EditableBlockData, b: EditableBlockData) => 
-                a.order - b.order
-              );
+            const blocksData = await blocksResponse.json();
+            console.log('Initial resume load:', {
+              resumeName: defaultResume.name,
+              blockCount: blocksData.blocks?.length || 0,
+              blocks: blocksData.blocks
+            });
 
-            setCanvasBlocks(resumeBlocks);
-            localStorage.setItem(CACHE_KEY, JSON.stringify(resumeBlocks));
+            // Update all states after successful load
+            setCurrentResumeId(defaultResume._id);
+            setCurrentResumeName(defaultResume.name);
+            setCanvasBlocks(blocksData.blocks || []);
           }
         }
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error loading initial data:', error);
       }
     };
 
-    loadBlocks();
+    loadInitialData();
   }, [isClient]);
-
-  // Debounced function to save blocks
-  const debouncedSave = useCallback(
-    async (blocks: EditableBlockData[]) => {
-      try {
-        // First, save blocks to user's blocks array
-        const blocksWithOrder = blocks.map((block, index) => ({
-          ...block,
-          order: index,
-        }));
-
-        const blockResponse = await fetch('/api/users/blocks', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            blocks: blocksWithOrder,
-          }),
-        });
-
-        if (!blockResponse.ok) {
-          console.error('Failed to save blocks');
-          return;
-        }
-
-        const { blocks: savedBlocks } = await blockResponse.json();
-
-        // Then update the resume's blockIds using the saved block IDs
-        const resumeResponse = await fetch('/api/users/resumes', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: currentResumeName,
-            blockIds: savedBlocks.map((block: any) => block._id),
-          }),
-        });
-
-        if (!resumeResponse.ok) {
-          console.error('Failed to update resume');
-        } else {
-          console.log('Resume and blocks saved successfully');
-        }
-      } catch (error) {
-        console.error('Error saving data:', error);
-      }
-    },
-    [currentResumeName]
-  );
-
-  const debouncedSaveHandler = useMemo(
-    () => debounce(debouncedSave, 1000),
-    [debouncedSave]
-  );
 
   // Function to generate LaTeX code for each block
   const generateLatexForBlock = useCallback((block: EditableBlockData) => {
@@ -289,66 +232,58 @@ export default function BuilderClient() {
 
   // Handler to add new blocks from the library
   const handleDropBlock = useCallback((block: EditableBlockData) => {
-    setCanvasBlocks(prevBlocks => {
-      const newBlock = {
-        ...block,
-        id: `${block.sectionName.toLowerCase()}-${uuidv4()}`.replace('-template', ''),
-      };
-      const updatedBlocks = [...prevBlocks, newBlock];
+    if (!currentResumeId) {
+      console.error('No resume selected');
+      return;
+    }
 
-      // Save to localStorage first
-      localStorage.setItem(CACHE_KEY, JSON.stringify(updatedBlocks));
+    // Create the new block once
+    const newBlock = {
+      ...block,
+      id: `${block.sectionName.toLowerCase()}-${uuidv4()}`.replace('-template', ''),
+      order: canvasBlocks.length // Add order here
+    };
 
-      // Then update server immediately instead of using debounce
-      (async () => {
-        try {
-          const blockResponse = await fetch('/api/users/blocks', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              blocks: updatedBlocks.map((block, index) => ({
-                ...block,
-                order: index,
-              })),
-            }),
-          });
+    // Update UI optimistically
+    setCanvasBlocks(prevBlocks => [...prevBlocks, newBlock]);
 
-          if (!blockResponse.ok) {
-            console.error('Failed to save blocks');
-            return;
-          }
+    // Single server update
+    (async () => {
+      try {
+        // Save block and update resume in one request
+        const response = await fetch('/api/users/blocks/add-to-resume', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            block: newBlock,
+            resumeId: currentResumeId
+          }),
+        });
 
-          const { blocks: savedBlocks } = await blockResponse.json();
-
-          // Update the resume with new block IDs
-          const resumeResponse = await fetch('/api/users/resumes', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              name: currentResumeName,
-              blockIds: savedBlocks.map((block: any) => block._id),
-            }),
-          });
-
-          if (!resumeResponse.ok) {
-            console.error('Failed to update resume');
-          }
-
-          // Update local state with server-generated IDs
-          setCanvasBlocks(savedBlocks);
-          localStorage.setItem(CACHE_KEY, JSON.stringify(savedBlocks));
-        } catch (error) {
-          console.error('Error saving new block:', error);
+        if (!response.ok) {
+          console.error('Failed to save block to resume');
+          // Revert optimistic update on failure
+          setCanvasBlocks(prevBlocks => prevBlocks.filter(b => b.id !== newBlock.id));
+          return;
         }
-      })();
 
-      return updatedBlocks;
-    });
-  }, [currentResumeName]);
+        const { block: savedBlock } = await response.json();
+        
+        // Update the block in canvas with the saved version (contains _id)
+        setCanvasBlocks(prevBlocks => 
+          prevBlocks.map(b => b.id === newBlock.id ? savedBlock : b)
+        );
+
+      } catch (error) {
+        console.error('Error saving new block:', error);
+        // Revert optimistic update on error
+        setCanvasBlocks(prevBlocks => prevBlocks.filter(b => b.id !== newBlock.id));
+      }
+    })();
+
+  }, [currentResumeId, canvasBlocks.length]);
 
   // Handler to update existing blocks
   const handleBlockUpdate = useCallback((id: string, updated: Partial<EditableBlockData>) => {
@@ -363,70 +298,61 @@ export default function BuilderClient() {
         }
         return block;
       });
-      debouncedSaveHandler(updatedBlocks);
       return updatedBlocks;
     });
-  }, [debouncedSaveHandler, generateLatexForBlock]);
+  }, [generateLatexForBlock]);
 
-  // Handler to delete a block
+  // Handler to delete blocks
   const handleDeleteBlock = useCallback((id: string) => {
+    if (!currentResumeId) {
+      console.error('No resume selected');
+      return;
+    }
+
     setCanvasBlocks(prevBlocks => {
-      // Filter out the deleted block
-      const updatedBlocks = prevBlocks.filter(block => {
-        // Use _id for server-side blocks since that's what we have
-        return block._id !== id;
-      });
+      const updatedBlocks = prevBlocks.filter(block => block._id !== id);
 
-      // Save to localStorage first
-      localStorage.setItem(CACHE_KEY, JSON.stringify(updatedBlocks));
-
-      // Then update server
+      // Delete from server
       (async () => {
         try {
-          // First update blocks
-          const blockResponse = await fetch('/api/users/blocks', {
-            method: 'POST',
+          // First delete the block from universal blocks array
+          const deleteResponse = await fetch('/api/users/blocks', {
+            method: 'DELETE',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              blocks: updatedBlocks.map((block, index) => ({
-                ...block,
-                order: index,
-              })),
-            }),
+            body: JSON.stringify({ blockId: id }),
           });
 
-          if (!blockResponse.ok) {
-            console.error('Failed to save blocks');
+          if (!deleteResponse.ok) {
+            console.error('Failed to delete block');
             return;
           }
 
-          const responseData = await blockResponse.json();
-
-          // Then update resume's blockIds
-          const resumeResponse = await fetch('/api/users/resumes', {
-            method: 'POST',
+          // Then update the resume's blockIds array
+          const resumeResponse = await fetch(`/api/users/resumes/${currentResumeId}`, {
+            method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
               name: currentResumeName,
-              blockIds: responseData.blocks.map((block: EditableBlockData) => block._id!),
+              blockIds: updatedBlocks.map(block => block._id),
             }),
           });
 
           if (!resumeResponse.ok) {
             console.error('Failed to update resume');
+            return;
           }
         } catch (error) {
-          console.error('Error saving after delete:', error);
+          console.error('Error deleting block:', error);
         }
       })();
 
       return updatedBlocks;
     });
-  }, [currentResumeName]);
+  }, [currentResumeId, currentResumeName]);
 
   // Refactored moveBlock function
   const moveBlock = useCallback((draggedId: string, hoveredId: string) => {
@@ -442,10 +368,9 @@ export default function BuilderClient() {
       const [removed] = updatedBlocks.splice(draggedIndex, 1);
       updatedBlocks.splice(hoveredIndex, 0, removed);
 
-      debouncedSaveHandler(updatedBlocks);
       return updatedBlocks;
     });
-  }, [debouncedSaveHandler]);
+  }, []);
 
   // Function to generate the complete LaTeX document
   const generateLatexDocument = useCallback(() => {
@@ -487,6 +412,93 @@ export default function BuilderClient() {
       });
   }, [generateLatexDocument]);
 
+  // Handler to switch between resumes
+  const handleResumeChange = useCallback(async (resumeId: string) => {
+    if (!resumeId || resumeId === 'empty') {
+      console.log('Invalid resume ID');
+      return;
+    }
+
+    try {
+      console.log('Switching to resume:', resumeId);
+      
+      // Find the resume in our current list
+      const selectedResume = resumes.find(r => r.id === resumeId);
+      if (!selectedResume) {
+        console.error('Resume not found in list');
+        return;
+      }
+      
+      // Fetch blocks for the selected resume
+      const response = await fetch(`/api/users/resumes/${resumeId}/blocks`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Failed to load resume blocks:', data.error);
+        return;
+      }
+
+      // Update resume details
+      setCurrentResumeId(resumeId);
+      setCurrentResumeName(selectedResume.name);
+
+      // Update canvas with the resume's blocks
+      const sortedBlocks = data.blocks.sort(
+        (a: EditableBlockData, b: EditableBlockData) => (a.order ?? 0) - (b.order ?? 0)
+      );
+      setCanvasBlocks(sortedBlocks);
+
+      console.log('Updated canvas blocks:', {
+        resumeName: selectedResume.name,
+        blockCount: sortedBlocks.length,
+        blocks: sortedBlocks
+      });
+    } catch (error) {
+      console.error('Error switching resume:', error);
+    }
+  }, [resumes]); // Add resumes to dependencies
+
+  const handleCreateNewResume = useCallback(async () => {
+    if (!newResumeName.trim()) return;
+
+    try {
+      const response = await fetch('/api/users/resumes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newResumeName,
+          blockIds: [],
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to create new resume');
+        return;
+      }
+
+      const data = await response.json();
+      
+      // Update resumes list first
+      const newResume = { id: data.resume._id, name: data.resume.name };
+      setResumes(prev => [...prev, newResume]);
+      
+      // Clear canvas and update current resume
+      setCanvasBlocks([]);
+      setCurrentResumeId(data.resume._id);
+      setCurrentResumeName(data.resume.name);
+
+      // Reset UI state
+      setIsNewResumeDialogOpen(false);
+      setNewResumeName("");
+
+      // No need to call handleResumeChange here since we've already set up the state
+    } catch (error) {
+      console.error('Error creating new resume:', error);
+    }
+  }, [newResumeName]);
+
   return (
     <main className="flex flex-col md:flex-row gap-4 p-4">
       {/* Block Library */}
@@ -502,14 +514,40 @@ export default function BuilderClient() {
 
       {/* Editor Canvas */}
       <div className="w-full md:w-1/2">
-        <h2 className="text-xl font-bold mb-2">Editor Canvas</h2>
-        <EditorCanvas
-          blocks={canvasBlocks}
-          onDropBlock={handleDropBlock}
-          onBlockUpdate={handleBlockUpdate}
-          moveBlock={moveBlock}
-          onDelete={handleDeleteBlock} // Pass the delete handler
-        />
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Editor Canvas</h2>
+          <ResumeSelector
+            currentResume={currentResumeId}
+            resumes={resumes}
+            onResumeChange={handleResumeChange}
+            onNewResume={() => setIsNewResumeDialogOpen(true)}
+          />
+        </div>
+        {resumes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[600px] border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+            <div className="text-center space-y-4">
+              <h3 className="text-xl font-semibold text-gray-700">No Resumes Yet</h3>
+              <p className="text-gray-600 max-w-sm">
+                Create your first resume to start building your professional profile
+              </p>
+              <Button 
+                onClick={() => setIsNewResumeDialogOpen(true)}
+                className="mt-4"
+                size="lg"
+              >
+                Create Your First Resume
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <EditorCanvas
+            blocks={canvasBlocks}
+            onDropBlock={handleDropBlock}
+            onBlockUpdate={handleBlockUpdate}
+            moveBlock={moveBlock}
+            onDelete={handleDeleteBlock}
+          />
+        )}
       </div>
 
       {/* Preview Section */}
@@ -520,6 +558,28 @@ export default function BuilderClient() {
           Copy LaTeX
         </Button>
       </div>
+
+      {/* New Resume Dialog */}
+      <Dialog open={isNewResumeDialogOpen} onOpenChange={setIsNewResumeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Resume</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Resume Name"
+            value={newResumeName}
+            onChange={(e) => setNewResumeName(e.target.value)}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewResumeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateNewResume}>
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

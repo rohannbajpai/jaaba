@@ -12,35 +12,35 @@ import { Card, CardContent } from "@/components/ui/card";
 
 /** Data interface for each résumé block. */
 export interface EditableBlockData {
-  id: string;
+  _id?: string;  // MongoDB ID
+  id: string;    // Client-side ID
   sectionName: string;
-
-  /* Common fields */
   title: string;
   location?: string;
   duration?: string;
+  order?: number;
 
-  /* Header-specific */
+  // Header-specific fields
   phone?: string;
   email?: string;
   github?: string;
   linkedin?: string;
 
-  /* Education-specific */
+  // Education-specific fields
   degree?: string;
   relevantCourses?: string;
   activities?: string;
 
-  /* Skills-specific */
+  // Skills-specific fields
   languages?: string;
   other?: string;
 
-  /* Experience-specific */
-  bullets?: string[]; // bullet points
-  role?: string; // e.g., "Software Engineer Intern"
+  // Experience-specific fields
+  bullets?: string[];
+  role?: string;
 
-  /* Projects-specific */
-  projectName?: string; // e.g., "Portfolio Website"
+  // Projects-specific fields
+  projectName?: string;
   technologies?: string;
   projectBullets?: string[];
 }

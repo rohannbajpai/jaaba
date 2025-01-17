@@ -1,4 +1,5 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose from 'mongoose';
+import { Schema } from 'mongoose';
 
 /** Block interface for user's saved blocks */
 export interface Block {
@@ -106,8 +107,6 @@ const UserSchema = new Schema<UserDocument>({
 
 // Create indexes for better query performance
 UserSchema.index({ email: 1 });
-UserSchema.index({ 'blocks._id': 1 });
-UserSchema.index({ 'resumes._id': 1 });
 
 // Export the User model
 export default mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema); 

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from "@/lib/auth";
+import mongoose from 'mongoose';
 
 /**
  * GET /api/users/blocks
@@ -40,52 +41,70 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { blocks } = await request.json();
-    if (!Array.isArray(blocks)) {
-      return NextResponse.json({ error: 'Invalid blocks data' }, { status: 400 });
-    }
+    const { block } = await request.json();
 
     await dbConnect();
 
-    // Use findOneAndUpdate instead of save()
+    // Create new block with MongoDB ID
+    const newBlock = {
+      ...block,
+      _id: new mongoose.Types.ObjectId()
+    };
+
+    // Add block to user's universal blocks array, ensuring no duplicates
     const result = await User.findOneAndUpdate(
-      { email: session.user.email },
       { 
-        $set: { blocks },
-        $setOnInsert: { 
-          email: session.user.email,
-          resumes: []
-        }
+        email: session.user.email,
+        'blocks.id': { $ne: block.id } // Prevent duplicates based on client-side ID
       },
-      { 
-        new: true, // Return updated document
-        upsert: true, // Create if doesn't exist
-        runValidators: true // Run model validations
-      }
+      { $push: { blocks: newBlock } },
+      { new: true }
     );
 
     if (!result) {
-      return NextResponse.json(
-        { error: 'Failed to update blocks' }, 
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to save block' }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      blocks: result.blocks 
-    });
+    // Get the newly created block
+    const savedBlock = result.blocks[result.blocks.length - 1];
 
+    return NextResponse.json({ block: savedBlock });
   } catch (error) {
     console.error('Error in POST /api/users/blocks:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' }, 
-      { status: 500 }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// Add a DELETE endpoint to remove blocks
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { blockId } = await request.json();
+
+    await dbConnect();
+
+    // Remove block from user's universal blocks array
+    const result = await User.findOneAndUpdate(
+      { email: session.user.email },
+      { $pull: { blocks: { _id: new mongoose.Types.ObjectId(blockId) } } },
+      { new: true }
     );
+
+    if (!result) {
+      return NextResponse.json({ error: 'Failed to delete block' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error in DELETE /api/users/blocks:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 
